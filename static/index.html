@@ -3,7 +3,11 @@
     <style>
         .side {
             display: grid;
-            grid-template-columns: auto auto auto auto auto auto auto auto
+            grid-template-columns: 20px auto auto auto auto auto auto auto auto
+        }
+
+        .index {
+            justify-self: center;
         }
     </style>
     <script src="../dist/game.js"></script>
@@ -15,21 +19,31 @@
 <h2> Player 2</h2>
 <div class="side">
 
+    <div></div>
+    <div class="index">1</div>
+    <div class="index">2</div>
+    <div class="index">3</div>
+    <div class="index">4</div>
+    <div class="index">5</div>
+    <div class="index">6</div>
+    <div class="index">7</div>
+    <div class="index">8</div>
+
+    <div> B </div>
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
 
+    <div> A </div>
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
-
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
@@ -38,27 +52,38 @@
 
 <h2> Player 1</h2>
 <div class="side">
+    <div> A </div>
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
 
+    <div> B </div>
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
 
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
+    <div></div>
+    <div class="index">1</div>
+    <div class="index">2</div>
+    <div class="index">3</div>
+    <div class="index">4</div>
+    <div class="index">5</div>
+    <div class="index">6</div>
+    <div class="index">7</div>
+    <div class="index">8</div>
 </div>
 
+<div id="actionLog"></div>
 
 <script>
 
