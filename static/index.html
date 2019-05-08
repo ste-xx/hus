@@ -1,0 +1,86 @@
+<html>
+<head>
+    <style>
+        .side {
+            display: grid;
+            grid-template-columns: auto auto auto auto auto auto auto auto
+        }
+    </style>
+    <script src="../dist/game.js"></script>
+</head>
+<body>
+
+<h1>Hus</h1>
+
+<h2> Player 2</h2>
+<div class="side">
+
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+    <input type="button" class="player1">
+</div>
+
+<h2> Player 1</h2>
+<div class="side">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+    <input type="button" class="player0">
+</div>
+
+
+<script>
+
+  const body = document.querySelector('body');
+  body.addEventListener('turn', ({detail: {player}}) =>{
+    [...document.querySelectorAll('.player0')].forEach((field)=> field.disabled = player !== 0);
+    [...document.querySelectorAll('.player1')].forEach((field)=> field.disabled = player !== 1);
+  });
+
+  const eventDispatcher = (event, payload={}) => body.dispatchEvent(new CustomEvent(event, {
+    bubbles: true,
+    detail: payload
+  }));
+  let game = new Game(eventDispatcher);
+  const render = () => {
+    [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.getStonesFor(PlayerEnum.Player0, index));
+    [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.getStonesFor(PlayerEnum.Player1, index));
+  };
+  render();
+
+
+</script>
+
+</body>
+</html>
