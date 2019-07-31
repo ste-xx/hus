@@ -4,7 +4,9 @@
       "esnext",
       "dom"
     ],
-    "module": "commonjs",
+    "module": "AMD",
+    "moduleResolution": "node",
+    "outFile": "./dist/app.js",
     "noImplicitReturns": true,
     "outDir": "dist",
     "sourceMap": true,
