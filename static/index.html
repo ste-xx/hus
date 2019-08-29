@@ -12,8 +12,10 @@
 
     </style>
     <script>
-      window.define = function(name, required, moduleFn) {
-        const require = function() { throw new Error("AMD require not supported!")};
+      window.define = function (name, required, moduleFn) {
+        const require = function () {
+          throw new Error("AMD require not supported!")
+        };
         const exports = window.define.modules[name] = {};
         const resolved = [require, exports];
         for (var i = 2; i < required.length; i++) {
@@ -26,7 +28,7 @@
       window.define.modules = {};
     </script>
     <script src="../dist/app.js"></script>
-<!--    <script src="../dist/game.js"></script>-->
+    <!--    <script src="../dist/game.js"></script>-->
 </head>
 <body>
 
@@ -103,45 +105,45 @@
 <div id="actionLog"></div>
 
 <script>
-  const setupUi = (gameFn) => {
-    const forPlayer = (player, fields) => {
-      const body = document.querySelector('body');
 
-      fields.forEach(field => field.addEventListener('click', ({target}) => {
-        gameFn()[player === 0 ? 'player0' : 'player1'].take(fields.findIndex(e => e === target));
-      }));
 
-      body.addEventListener('turn', ({detail: {player: _player}}) => {
-        fields.forEach((field) => field.disabled = _player !== player);
-      });
-    };
-
-    forPlayer(0, [...document.querySelectorAll('.player0')]);
-    forPlayer(1, [...document.querySelectorAll('.player1')].reverse());
-  };
-
-  // const render = (game) => {
-  //   [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.getStonesFor(PlayerEnum.Player0, index));
-  //   [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.getStonesFor(PlayerEnum.Player1, index));
-  // };
-  //
   const eventDispatcher = (event, payload = {}) =>
     document.querySelector('body')
       .dispatchEvent(new CustomEvent(event, {bubbles: true, detail: payload}));
-  const eventBus = document.querySelector('body');
 
+  const eventBus = document.querySelector('body');
   const orgAddEventListener = eventBus.addEventListener;
   eventBus.addEventListener = (event, cb) => orgAddEventListener(event, ({detail}) => cb(detail));
-  // new window.define.modules.ActionLog.HTMLActionLog(eventBus,document.querySelector('#actionLog'));
-  new window.define.modules.ActionLog.ConsoleActionLog(eventBus);
-  new window.define.modules.Game.Game(eventDispatcher);
 
-  // // actionLog();
-  // let game;
+  const setupUi = (game) => {
+    const setupFor = (player) => ({
+      with: (fields) => {
+        fields.forEach(field => field.addEventListener('click', ({target}) =>
+          player.take(fields.findIndex(e => e === target))));
+
+        eventBus.addEventListener('endTurn', ({player: {name}}) =>
+          fields.forEach((field) => field.disabled = (name === player.name)));
+      }
+    });
+
+    [...document.querySelectorAll('.player0')].forEach((field) => field.disabled = false);
+    [...document.querySelectorAll('.player1')].forEach((field) => field.disabled = true);
+
+    setupFor(game.player0).with([...document.querySelectorAll('.player0')]);
+    setupFor(game.player1).with([...document.querySelectorAll('.player1')].reverse());
+  };
+
+  const render = (game) => {
+    [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.player0.getStonesFor(index));
+    [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.player1.getStonesFor(index));
+  };
   //
-  // setupUi(() => game);
-  // game = new Game(eventDispatcher);
-  // render(game);
+
+  new window.define.modules.ActionLog.HTMLActionLog(eventBus, document.querySelector('#actionLog'));
+  // new window.define.modules.ActionLog.ConsoleActionLog(eventBus);
+  const game = new window.define.modules.Game.Game(eventDispatcher);
+  setupUi(game);
+  render(game);
 
 
 </script>

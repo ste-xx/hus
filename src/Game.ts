@@ -1,4 +1,4 @@
-import {EventDispatcher, TakeErrorEvent, TakeEvent, TurnEvent} from "./event";
+import {EndTurnEvent, EventDispatcher, TakeErrorEvent, TakeEvent, TryTakeEvent, TurnEvent} from "./event";
 
 class Field {
   public stones: number;
@@ -38,8 +38,50 @@ class Board {
 }
 
 
-//verketette liste -> kann man einfach immer weiter itererien
+// const when = (cond, f) => x => cond(x) ? f(x) : x;
 
+function wtf<T>(f: () => void): (x: T) => T {
+  return (x) => {
+    f();
+    return x;
+  }
+}
+
+function when<T>(predicate: (x: T) => boolean, f: (x: T) => T): (x: T) => T {
+  return (x) => predicate(x) ? f(x) : x;
+}
+
+function whenBoolean(predicate: () => boolean, f: () => void): () => boolean {
+  return () => when((ignore: boolean) => predicate(), wtf(f))(true);
+}
+
+function applyWhen(predicate: () => boolean, f: () => void): () => boolean {
+  return () => {
+    if (predicate()) {
+      f();
+      return true;
+    }
+    return false;
+  };
+}
+
+function applyWhenNot(predicate: () => boolean, f: () => void): () => boolean {
+  return () => {
+    if (!predicate()) {
+      f();
+      return false;
+    }
+    return true;
+  };
+}
+
+
+function compose2<T, U, V>(f: (x: T) => U, g: (y: U) => V): (x: T) => V {
+  return x => g(f(x))
+}
+
+// verketette liste -> kann man einfach immer weiter itererien
+//
 export class Player {
   private side: BoardSide;
   public name: string;
@@ -55,22 +97,32 @@ export class Player {
     return this.side.getStonesFor(fieldIndex).stones;
   }
 
+  private isAllowedToTake(fieldIndex: number) {
+    const dispatchError = (reason: string) => this.eventDispatcher<TakeErrorEvent>('takeError', {
+      player: this,
+      reason,
+      fieldIndex
+    });
+
+    const existsStone = (): boolean => this.side.existsStonesFor(fieldIndex);
+    const minStones = (): boolean => this.side.getStonesFor(fieldIndex).stones > 1;
+
+    // if one rule returns false -> not allowed
+    const rules: Array<() => boolean> = [
+      applyWhenNot(existsStone, () => dispatchError('can not take because, there are no stones')),
+      applyWhenNot(minStones, () => dispatchError('can not take, at least 2 stones are required'))
+    ];
+
+    return rules.reduce((isAllowed, rule) => isAllowed ? rule() : isAllowed, true);
+  }
+
   public take(fieldIndex: number) {
-    this.eventDispatcher<TakeEvent>('take', {player: this, fieldIndex});
-    if (!this.side.existsStonesFor(fieldIndex)) {
-      console.error('wtf');
-      this.eventDispatcher<TakeErrorEvent>('takeError', {
-        player: this,
-        reason: `can not take ${fieldIndex} because, there are no stones`,
-        fieldIndex
-      });
+    this.eventDispatcher<TryTakeEvent>('tryTake', {player: this, fieldIndex});
+    if (this.isAllowedToTake(fieldIndex)) {
+      this.eventDispatcher<TakeEvent>('take', {player: this, fieldIndex});
+      this.eventDispatcher<EndTurnEvent>('endTurn', {player: this});
     }
   }
-}
-
-enum PlayerEnum {
-  Player0 = "PLAYER0",
-  Player1 = "PLAYER1"
 }
 
 export class Game {
@@ -82,26 +134,12 @@ export class Game {
   constructor(eventDispatcher: EventDispatcher) {
     this.board = new Board();
 
-    this.player0 = new Player('Player 1',this.board.side0, (event, payload) => eventDispatcher(event, {
-      ...payload,
-      player: 0
-    }));
+    this.player0 = new Player('Player 1', this.board.side0, eventDispatcher);
 
-    this.player1 = new Player('Player 2', this.board.side1, (event, payload) => eventDispatcher(event, {
-      ...payload,
-      player: 1
-    }));
+    this.player1 = new Player('Player 2', this.board.side1, eventDispatcher);
 
     this.eventDispatcher = eventDispatcher;
     this.eventDispatcher<TurnEvent>('turn', {player: this.player0});
-  }
-
-  getStonesFor(player: PlayerEnum, fieldIndex: number): number {
-    if (player === PlayerEnum.Player0) {
-      return this.board.side0.getStonesFor(fieldIndex).stones;
-    } else {
-      return this.board.side1.getStonesFor(fieldIndex).stones;
-    }
   }
 }
 

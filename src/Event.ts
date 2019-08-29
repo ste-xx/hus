@@ -2,12 +2,16 @@ import {Player} from "./Game";
 
 export type Event = string;
 export type TurnEvent = 'turn';
+export type EndTurnEvent = 'endTurn';
+export type TryTakeEvent = 'tryTake';
 export type TakeEvent = 'take';
 export type TakeErrorEvent = 'takeError';
 
 //@formatter:off
 export type EventPayload<E> =
   E extends TurnEvent ? { player: Player } :
+  E extends EndTurnEvent ? { player: Player } :
+  E extends TryTakeEvent ? { player: Player, fieldIndex: number } :
   E extends TakeEvent ? { player: Player, fieldIndex: number } :
   E extends TakeErrorEvent ? { player: Player, fieldIndex: number, reason: string } :
   unknown;

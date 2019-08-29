@@ -1,14 +1,23 @@
-import {EventBus, TakeErrorEvent, TakeEvent, TurnEvent} from "./Event";
+import {EndTurnEvent, EventBus, TakeErrorEvent, TakeEvent, TryTakeEvent, TurnEvent} from "./Event";
+
+
+function indexToName(fieldIndex: number){
+  return `${fieldIndex < 8 ? 'A' : 'B'}${fieldIndex % 8 + 1}`;
+}
 
 abstract class ActionLog {
   constructor(eventBus: EventBus) {
     eventBus.addEventListener<TurnEvent>('turn', ({player}) => this.log(`${player.name} turn.`));
+    eventBus.addEventListener<EndTurnEvent>('endTurn', ({player}) => this.log(`${player.name} ends the turn.`));
+
+    eventBus.addEventListener<TryTakeEvent>('tryTake', ({player, fieldIndex}) =>
+      this.log(`${player.name} tries to take ${indexToName(fieldIndex)}`));
 
     eventBus.addEventListener<TakeEvent>('take', ({player, fieldIndex}) =>
-      this.log(`${player.name} take index ${fieldIndex}`));
+      this.log(`${player.name} take ${indexToName(fieldIndex)}`));
 
     eventBus.addEventListener<TakeErrorEvent>('takeError', ({player, fieldIndex, reason}) =>
-      this.log(`${player.name} take index ${fieldIndex} failed: ${reason}`));
+      this.log(`${player.name} take ${indexToName(fieldIndex)} failed: ${reason}`));
   }
 
   public abstract log(msg: string): void;
