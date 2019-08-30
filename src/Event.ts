@@ -11,7 +11,7 @@ export type TakeErrorEvent = 'takeError';
 export type EventPayload<E> =
   E extends TurnEvent ? { player: Player } :
   E extends EndTurnEvent ? { player: Player } :
-  E extends TryTakeEvent ? { player: Player, fieldIndex: number } :
+  E extends TryTakeEvent ? { player: Player, boardSideId: string, fieldIndex: number } :
   E extends TakeEvent ? { player: Player, fieldIndex: number } :
   E extends TakeErrorEvent ? { player: Player, fieldIndex: number, reason: string } :
   unknown;
@@ -22,4 +22,5 @@ export type EventDispatcher = <E extends Event>(event: E, payload: EventPayload<
 
 export type EventBus = {
   addEventListener: <E extends Event>(event: E, cb: (payload: EventPayload<E>) => void) => void;
+  removeEventListener: <E extends Event>(event: E, cb: (payload: EventPayload<E>)=> void) => void;
 }

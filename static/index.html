@@ -114,7 +114,6 @@
   const eventBus = document.querySelector('body');
   const orgAddEventListener = eventBus.addEventListener;
   eventBus.addEventListener = (event, cb) => orgAddEventListener(event, ({detail}) => cb(detail));
-
   const setupUi = (game) => {
     const setupFor = (player) => ({
       with: (fields) => {
@@ -141,7 +140,7 @@
 
   new window.define.modules.ActionLog.HTMLActionLog(eventBus, document.querySelector('#actionLog'));
   // new window.define.modules.ActionLog.ConsoleActionLog(eventBus);
-  const game = new window.define.modules.Game.Game(eventDispatcher);
+  const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game);
 
