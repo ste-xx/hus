@@ -12,7 +12,7 @@ export type EventPayload<E> =
   E extends TurnEvent ? { player: Player } :
   E extends EndTurnEvent ? { player: Player } :
   E extends TryTakeEvent ? { player: Player, boardSideId: string, fieldIndex: number } :
-  E extends TakeEvent ? { player: Player, fieldIndex: number } :
+  E extends TakeEvent ? { player: Player,  boardSideId: string, fieldIndex: number, stoneCount: number } :
   E extends TakeErrorEvent ? { player: Player, fieldIndex: number, reason: string } :
   unknown;
 //formattor:on

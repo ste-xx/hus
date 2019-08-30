@@ -13,8 +13,8 @@ abstract class ActionLog {
     eventBus.addEventListener<TryTakeEvent>('tryTake', ({player, fieldIndex}) =>
       this.log(`${player.name} tries to take ${indexToName(fieldIndex)}`));
 
-    eventBus.addEventListener<TakeEvent>('take', ({player, fieldIndex}) =>
-      this.log(`${player.name} take ${indexToName(fieldIndex)}`));
+    eventBus.addEventListener<TakeEvent>('take', ({player, fieldIndex, stoneCount}) =>
+      this.log(`${player.name} take ${indexToName(fieldIndex)} with ${stoneCount} ${stoneCount === 1 ? 'stone' : 'stones'}`));
 
     eventBus.addEventListener<TakeErrorEvent>('takeError', ({player, fieldIndex, reason}) =>
       this.log(`${player.name} take ${indexToName(fieldIndex)} failed: ${reason}`));

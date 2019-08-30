@@ -1,8 +1,17 @@
-import {EventBus, EventDispatcher, EventPayload, TakeErrorEvent, TakeEvent, TryTakeEvent, TurnEvent} from "./event";
+import {
+  EndTurnEvent,
+  EventBus,
+  EventDispatcher,
+  EventPayload,
+  TakeErrorEvent,
+  TakeEvent,
+  TryTakeEvent,
+  TurnEvent
+} from "./event";
 import {uuidv4, when} from "./fn";
 
 class Field {
-  public readonly stones: number;
+  public stones: number;
 
   constructor(stones: number) {
     this.stones = stones;
@@ -24,7 +33,9 @@ class BoardSide {
     this.eventDispatcher = eventDispatcher;
     this.id = uuidv4();
     // todo: remove eventlistener if not current board
-    eventBus.addEventListener<TryTakeEvent>('tryTake', when(this.isThisBoard.bind(this), this.take.bind(this)));
+    eventBus.addEventListener<TryTakeEvent>('tryTake', when(this.isThisBoard.bind(this), this.tryTake.bind(this)));
+    eventBus.addEventListener<TakeEvent>('take', when(this.isThisBoard.bind(this), this.take.bind(this)));
+
   }
 
   private isThisBoard({boardSideId}: EventPayload<TryTakeEvent>) {
@@ -39,7 +50,7 @@ class BoardSide {
     return this.fields[index];
   }
 
-  public take(payload: EventPayload<TryTakeEvent>): EventPayload<TryTakeEvent> {
+  public tryTake(payload: EventPayload<TryTakeEvent>): EventPayload<TryTakeEvent> {
     const {player, fieldIndex} = payload;
     const existsStone = (): boolean => this.existsStonesFor(fieldIndex);
     const minStones = (): boolean => this.getStonesFor(fieldIndex).stones > 1;
@@ -56,7 +67,7 @@ class BoardSide {
 
     const result = rules.reduce((value, rule) => value.isAllowed ? rule() : value, {isAllowed: true} as isAllowedToTakeResult);
     if (result.isAllowed) {
-      this.eventDispatcher<TakeEvent>('take', {player, fieldIndex});
+      this.eventDispatcher<TakeEvent>('take', {player, boardSideId: this.id, fieldIndex, stoneCount: this.getStonesFor(fieldIndex).stones});
       return payload;
     }
 
@@ -66,6 +77,26 @@ class BoardSide {
       fieldIndex
     });
 
+    return payload;
+  }
+
+  public take(payload: EventPayload<TakeEvent>): EventPayload<TakeEvent> {
+    const {stoneCount, fieldIndex} = payload;
+    const fullRound = Math.trunc(stoneCount / 16);
+    const steps = stoneCount % 16;
+    //todo functional, create new
+    this.fields[fieldIndex].stones =0;
+    this.fields.forEach((f) => f.stones += fullRound);
+    for(let i=1; i<=steps; i++){
+      this.fields[(fieldIndex+i)%16].stones += 1;
+    }
+    // distribute stones
+    // steal phase
+    // check win condition
+    // check loose condition
+    // check retake condition
+    // end turn
+    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
     return payload;
   }
 }
@@ -97,7 +128,6 @@ export class Player {
 
   public take(fieldIndex: number) {
     this.eventDispatcher<TryTakeEvent>('tryTake', {boardSideId: this.side.id, player: this, fieldIndex});
-    // this.eventDispatcher<EndTurnEvent>('endTurn', {player: this});
   }
 }
 
