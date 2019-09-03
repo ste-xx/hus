@@ -133,8 +133,8 @@
   };
 
   const render = (game) => {
-    [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.player0.getStonesFor(index));
-    [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.player1.getStonesFor(index));
+    [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.player0.getStoneCountFor(index));
+    [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.player1.getStoneCountFor(index));
   };
   //
 
