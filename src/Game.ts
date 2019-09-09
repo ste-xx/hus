@@ -126,10 +126,6 @@ export class FieldArray {
     return Array.from(this);
   }
 
-  private indexToPrintablePosition(index: number) {
-    return `${index < this.length / 2 ? 'A' : 'B'}${index % (this.length / 2) + 1}`;
-  }
-
   public toString() {
     const arr = this.toArray();
     return [
@@ -171,7 +167,7 @@ export class FieldArray {
     const fullRoundTrips = () => Math.trunc(this[index].stones / this.length);
 
     return {
-      newFieldArray: new FieldArray([...this]
+      newFieldArray: new FieldArray(this.toArray()
         .map(ifTakenField(createZeroField))
         .map(createFieldPlus(fullRoundTrips()))
         .map(ifInStepRange(createFieldPlus(1)))

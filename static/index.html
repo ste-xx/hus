@@ -117,8 +117,9 @@
   const setupUi = (game) => {
     const setupFor = (player) => ({
       with: (fields) => {
-        fields.forEach(field => field.addEventListener('click', ({target}) =>
-          player.take(fields.findIndex(e => e === target))));
+
+        fields.slice(0, 8).forEach((field, index) => field.addEventListener('click', () => player.take(index)));
+        fields.slice(8, 16).reverse().forEach((field, index) =>  field.addEventListener('click', () => player.take(index +8)));
 
         eventBus.addEventListener('endTurn', ({player: {name}}) =>
           fields.forEach((field) => field.disabled = (name === player.name)));
@@ -133,8 +134,12 @@
   };
 
   const render = (game) => {
-    [...document.querySelectorAll('.player0')].forEach((field, index) => field.value = game.player0.getStoneCountFor(index));
-    [...document.querySelectorAll('.player1')].reverse().forEach((field, index) => field.value = game.player1.getStoneCountFor(index));
+    const arr0 = [...document.querySelectorAll('.player0')];
+    arr0.slice(0, 8).forEach((field, index) => field.value = game.player0.getStoneCountFor(index));
+    arr0.slice(8, 16).reverse().forEach((field, index) => field.value = game.player0.getStoneCountFor(index + 8));
+    const arr1 = [...document.querySelectorAll('.player1')].reverse();
+    arr1.slice(0, 8).forEach((field, index) => field.value = game.player1.getStoneCountFor(index));
+    arr1.slice(8, 16).reverse().forEach((field, index) => field.value = game.player1.getStoneCountFor(index + 8));
   };
   //
 

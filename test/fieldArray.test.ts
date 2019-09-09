@@ -27,7 +27,7 @@ describe('fieldArray', () => {
     );
   });
 
-  describe.only('take', () => {
+  describe('take', () => {
     it.each([
       [
         FieldArray.createFrom([2, 0, 0, 0, 0, 0]),

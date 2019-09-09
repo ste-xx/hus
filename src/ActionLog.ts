@@ -1,8 +1,8 @@
 import {EndTurnEvent, EventBus, TakeErrorEvent, TakeEvent, TryStealEvent, TryTakeEvent, TurnEvent} from "./Event";
 
 
-export function indexToName(fieldIndex: number){
-  return `${fieldIndex < 8 ? 'A' : 'B'}${fieldIndex % 8 + 1}`;
+export function indexToName(fieldIndex: number) {
+  return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16-fieldIndex}`}`;
 }
 
 abstract class ActionLog {
