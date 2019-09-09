@@ -6,6 +6,7 @@ export type EndTurnEvent = 'endTurn';
 export type TryTakeEvent = 'tryTake';
 export type TakeEvent = 'take';
 export type TakeErrorEvent = 'takeError';
+export type TryStealEvent = 'trySteal';
 
 //@formatter:off
 export type EventPayload<E> =
@@ -14,6 +15,7 @@ export type EventPayload<E> =
   E extends TryTakeEvent ? { player: Player, boardSideId: string, fieldIndex: number } :
   E extends TakeEvent ? { player: Player,  boardSideId: string, fieldIndex: number, stoneCount: number } :
   E extends TakeErrorEvent ? { player: Player, fieldIndex: number, reason: string } :
+  E extends TryStealEvent ? { player: Player, boardSideId: string, fieldIndex: number, stoneCount: number } :
   unknown;
 //formattor:on
 

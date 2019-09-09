@@ -1,7 +1,7 @@
-import {EndTurnEvent, EventBus, TakeErrorEvent, TakeEvent, TryTakeEvent, TurnEvent} from "./Event";
+import {EndTurnEvent, EventBus, TakeErrorEvent, TakeEvent, TryStealEvent, TryTakeEvent, TurnEvent} from "./Event";
 
 
-function indexToName(fieldIndex: number){
+export function indexToName(fieldIndex: number){
   return `${fieldIndex < 8 ? 'A' : 'B'}${fieldIndex % 8 + 1}`;
 }
 
@@ -18,6 +18,9 @@ abstract class ActionLog {
 
     eventBus.addEventListener<TakeErrorEvent>('takeError', ({player, fieldIndex, reason}) =>
       this.log(`${player.name} take ${indexToName(fieldIndex)} failed: ${reason}`));
+
+    eventBus.addEventListener<TryStealEvent>('trySteal', ({player, fieldIndex}) =>
+      this.log(`${player.name} tries to steal on position ${indexToName(fieldIndex)}`));
   }
 
   public abstract log(msg: string): void;

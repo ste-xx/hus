@@ -5,12 +5,13 @@ import {
   EventPayload,
   TakeErrorEvent,
   TakeEvent,
+  TryStealEvent,
   TryTakeEvent,
   TurnEvent
 } from "./event";
 import {uuidv4, when} from "./fn";
 
-class Field {
+export class Field {
   public readonly stones: number;
 
   constructor(stones: number) {
@@ -38,7 +39,7 @@ function createAllowedToTake(): AllowedToTake {
   }
 }
 
-interface NotAllowedToTake {
+export interface NotAllowedToTake {
   isAllowed: false;
   reason: string;
   map: <T>(f: (v: NotAllowedToTake) => T) => T
@@ -46,6 +47,10 @@ interface NotAllowedToTake {
 
 interface NotAllowedBecauseNoStoneExists extends NotAllowedToTake {
   reason: 'notAllowedBecauseNoStoneExists'
+}
+
+interface NotAllowedBecauseIndexOutOfBound extends NotAllowedToTake {
+  reason: 'notAllowedBecauseIndexOutOfBound'
 }
 
 function createNotAllowedBecauseNoStoneExists(): NotAllowedBecauseNoStoneExists {
@@ -56,6 +61,17 @@ function createNotAllowedBecauseNoStoneExists(): NotAllowedBecauseNoStoneExists 
       isAllowed: false,
       reason: 'notAllowedBecauseNoStoneExists'
     } as NotAllowedBecauseNoStoneExists)
+  }
+}
+
+function createNotAllowedBecauseIndexOutOfBound(): NotAllowedBecauseIndexOutOfBound {
+  return {
+    isAllowed: false,
+    reason: 'notAllowedBecauseIndexOutOfBound',
+    map: <T>(f: (v: NotAllowedBecauseIndexOutOfBound) => T) => f({
+      isAllowed: false,
+      reason: 'notAllowedBecauseIndexOutOfBound'
+    } as NotAllowedBecauseIndexOutOfBound)
   }
 }
 
@@ -74,9 +90,9 @@ function createNotAllowedBecauseNotMinStones(): NotAllowedBecauseNotMinStones {
   }
 }
 
-type IsAllowedToTakeResult = (AllowedToTake | NotAllowedBecauseNoStoneExists | NotAllowedBecauseNotMinStones);
+type IsAllowedToTakeResult = (AllowedToTake | NotAllowedBecauseNoStoneExists | NotAllowedBecauseNotMinStones | NotAllowedBecauseIndexOutOfBound);
 
-class FieldArray {
+export class FieldArray {
   [key: number]: Field
 
   length: number;
@@ -86,12 +102,18 @@ class FieldArray {
     this.length = fields.length;
   }
 
-  public static createFrom(fields: Field[]) {
+  public static createFrom(fields: Field[]): FieldArray {
+    if (fields.length < 2) {
+      throw new Error('At least 2 fields are required');
+    }
+    if (fields.length % 2 !== 0) {
+      throw new Error('fields must be dividable by 2')
+    }
     return new FieldArray(fields);
   }
 
-  public static createNewInitialized() {
-    return new FieldArray(Array.from({length: 16}, (v, i) => new Field(i > 3 && i < 8 ? 0 : 2)))
+  public static createNewInitialized(): FieldArray {
+    return FieldArray.createFrom(Array.from({length: 16}, (v, i) => new Field(i > 3 && i < 8 ? 0 : 2)))
   }
 
   * [Symbol.iterator]() {
@@ -100,18 +122,36 @@ class FieldArray {
     }
   }
 
+  public toArray() {
+    return Array.from(this);
+  }
+
+  private indexToPrintablePosition(index: number) {
+    return `${index < this.length / 2 ? 'A' : 'B'}${index % (this.length/2) + 1}`;
+  }
+
+  public toString() {
+    return this.toArray().map((v, i) => `${this.indexToPrintablePosition(i)}:${this[i].stones}`).reduce((acc, cur, idx) => {
+      return `${acc}${idx === this.length/2 ? '\n ' : ' '}${cur}`;
+    }, '');
+  }
+
   public isAllowedToTake(index: number): IsAllowedToTakeResult {
-    const existsStone = (): IsAllowedToTakeResult => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecauseNoStoneExists()
+    const inIndexRange = (): IsAllowedToTakeResult => index >= 0 && index < this.length ? createAllowedToTake() : createNotAllowedBecauseIndexOutOfBound();
+    const existsStone = (): IsAllowedToTakeResult => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecauseNoStoneExists();
     const minStones = (): IsAllowedToTakeResult => this[index].stones > 1 ? createAllowedToTake() : createNotAllowedBecauseNotMinStones();
     // if one rule returns false -> not allowed
     const rules: Array<() => IsAllowedToTakeResult> = [
+      inIndexRange,
       existsStone,
       minStones
     ];
     return rules.reduce((value, rule) => value.isAllowed ? rule() : value, {isAllowed: true} as IsAllowedToTakeResult);
   }
 
-  public take(index: number): FieldArray {
+  public take(index: number): { newFieldArray: FieldArray, lastSeatedIndex: number } {
+    const steps = this[index].stones % 16;
+
     const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number) => i === index ? f(v) : v;
     const isNextField = (from: number) => (v: Field, i: number) => {
       const nextField = from === 15 ? 0 : from + 1;
@@ -128,28 +168,30 @@ class FieldArray {
     const createFieldPlus = (stones: number) => (v: Field) => new Field(v.stones + stones);
     const fullRoundTrips = () => Math.trunc(this[index].stones / 16);
 
-    return new FieldArray([...this]
-      .map(ifTakenField(createZeroField))
-      .map(createFieldPlus(fullRoundTrips()))
-      .map(ifInStepRange(createFieldPlus(1)))
-    );
+    return {
+      newFieldArray: new FieldArray([...this]
+        .map(ifTakenField(createZeroField))
+        .map(createFieldPlus(fullRoundTrips()))
+        .map(ifInStepRange(createFieldPlus(1)))
+      ),
+      lastSeatedIndex: (index + steps) % 16
+    }
   }
 }
 
-class BoardSide {
-  private readonly board: Board;
-  private fields: FieldArray;
+export class BoardSide {
+  private field: FieldArray;
   public readonly id: string;
   private readonly eventDispatcher: EventDispatcher;
 
-  constructor(board: Board, fields: FieldArray, eventDispatcher: EventDispatcher, eventBus: EventBus) {
-    this.fields = fields;
-    this.board = board;
+  constructor(field: FieldArray, eventDispatcher: EventDispatcher, eventBus: EventBus) {
+    this.field = field;
     this.eventDispatcher = eventDispatcher;
     this.id = uuidv4();
     // todo: remove eventlistener if not current board
     eventBus.addEventListener<TryTakeEvent>('tryTake', when(this.isThisBoard.bind(this), this.tryTake.bind(this)));
     eventBus.addEventListener<TakeEvent>('take', when(this.isThisBoard.bind(this), this.take.bind(this)));
+    eventBus.addEventListener<TryStealEvent>('trySteal', when(this.isThisBoard.bind(this), this.trySteal.bind(this)));
 
   }
 
@@ -158,24 +200,22 @@ class BoardSide {
   }
 
   public existsStonesFor(fieldIndex: number) {
-    return this.fields[fieldIndex].isNotEmpty();
+    return this.field[fieldIndex].isNotEmpty();
   };
 
-  public getStoneCountFor(index: number) {
-    return this.fields[index].stones;
+  public getStoneCountFor(fieldIndex: number) {
+    return this.field[fieldIndex].stones;
   }
 
   public tryTake(payload: EventPayload<TryTakeEvent>): EventPayload<TryTakeEvent> {
     const {player, fieldIndex} = payload;
-
-    const take = this.fields.isAllowedToTake(fieldIndex);
-
+    const take = this.field.isAllowedToTake(fieldIndex);
     if (take.isAllowed) {
       this.eventDispatcher<TakeEvent>('take', {
         player,
         boardSideId: this.id,
         fieldIndex,
-        stoneCount: this.fields[fieldIndex].stones
+        stoneCount: this.field[fieldIndex].stones
       });
       return payload;
     }
@@ -187,6 +227,7 @@ class BoardSide {
         switch (error.reason) {
           case "notAllowedBecauseNoStoneExists": return 'can not take because, there are no stones';
           case "notAllowedBecauseNotMinStones":  return 'can not take, at least two stones are required';
+          case 'notAllowedBecauseIndexOutOfBound': return 'can not take, index out of bound';
           default: return 'unknown';
         }
       }),
@@ -198,18 +239,30 @@ class BoardSide {
   }
 
   public take(payload: EventPayload<TakeEvent>): EventPayload<TakeEvent> {
-    const {fieldIndex} = payload;
-    this.fields = this.fields.take(fieldIndex);
-    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
-    return payload;
+    const {player, fieldIndex} = payload;
+    const {newFieldArray, lastSeatedIndex} = this.field.take(fieldIndex);
+    this.field = newFieldArray;
+
+    this.eventDispatcher<TryStealEvent>('trySteal', {
+      player,
+      boardSideId: this.id,
+      fieldIndex: lastSeatedIndex,
+      stoneCount: this.field[lastSeatedIndex].stones
+    });
     // distribute stones
     // steal phase
     // check win condition
     // check loose condition
     // check retake condition
     // end turn
-    // this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
-    // return payload;
+//    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
+    return payload;
+  }
+
+  public trySteal(payload: EventPayload<TryStealEvent>): EventPayload<TryStealEvent> {
+    console.warn('try steal' + payload.stoneCount);
+    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
+    return payload;
   }
 }
 
@@ -218,8 +271,8 @@ class Board {
   public readonly side1: BoardSide;
 
   constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
-    this.side0 = new BoardSide(this, FieldArray.createNewInitialized(), eventDispatcher, eventBus);
-    this.side1 = new BoardSide(this, FieldArray.createNewInitialized(), eventDispatcher, eventBus);
+    this.side0 = new BoardSide(FieldArray.createNewInitialized(), eventDispatcher, eventBus);
+    this.side1 = new BoardSide(FieldArray.createNewInitialized(), eventDispatcher, eventBus);
   }
 }
 
