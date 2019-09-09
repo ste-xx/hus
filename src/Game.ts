@@ -102,18 +102,18 @@ export class FieldArray {
     this.length = fields.length;
   }
 
-  public static createFrom(fields: Field[]): FieldArray {
+  public static createFrom(fields: number[]): FieldArray {
     if (fields.length < 2) {
       throw new Error('At least 2 fields are required');
     }
     if (fields.length % 2 !== 0) {
       throw new Error('fields must be dividable by 2')
     }
-    return new FieldArray(fields);
+    return new FieldArray(fields.map(v => new Field(v)));
   }
 
   public static createNewInitialized(): FieldArray {
-    return FieldArray.createFrom(Array.from({length: 16}, (v, i) => new Field(i > 3 && i < 8 ? 0 : 2)))
+    return FieldArray.createFrom(Array.from({length: 16}, (v, i) => i > 3 && i < 8 ? 0 : 2));
   }
 
   * [Symbol.iterator]() {
@@ -127,13 +127,15 @@ export class FieldArray {
   }
 
   private indexToPrintablePosition(index: number) {
-    return `${index < this.length / 2 ? 'A' : 'B'}${index % (this.length/2) + 1}`;
+    return `${index < this.length / 2 ? 'A' : 'B'}${index % (this.length / 2) + 1}`;
   }
 
   public toString() {
-    return this.toArray().map((v, i) => `${this.indexToPrintablePosition(i)}:${this[i].stones}`).reduce((acc, cur, idx) => {
-      return `${acc}${idx === this.length/2 ? '\n ' : ' '}${cur}`;
-    }, '');
+    const arr = this.toArray();
+    return [
+      ...arr.slice(0, this.length / 2).map(({stones}, i) => `A${i + 1}:${stones}`),
+      ...arr.slice(this.length / 2, this.length).reverse().map(({stones}, i) => `B${i + 1}:${stones}`)
+    ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
   }
 
   public isAllowedToTake(index: number): IsAllowedToTakeResult {
@@ -150,23 +152,23 @@ export class FieldArray {
   }
 
   public take(index: number): { newFieldArray: FieldArray, lastSeatedIndex: number } {
-    const steps = this[index].stones % 16;
+    const steps = this[index].stones % this.length;
 
     const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number) => i === index ? f(v) : v;
     const isNextField = (from: number) => (v: Field, i: number) => {
-      const nextField = from === 15 ? 0 : from + 1;
+      const nextField = from === this.length - 1 ? 0 : from + 1;
       return i === nextField;
     };
     const ifInStepRange = (f: (v: Field) => Field) => (v: Field, i: number) => {
-      const steps = this[index].stones % 16;
-      const nextFns = Array.from({length: steps}, (v, i) => isNextField((index + i) % 16));
+      const steps = this[index].stones % this.length;
+      const nextFns = Array.from({length: steps}, (v, i) => isNextField((index + i) % this.length));
       const isInRange = nextFns.reduce((acc, cur) => cur(v, i) || acc, false);
       return isInRange ? f(v) : v;
     };
 
     const createZeroField = () => new Field(0);
     const createFieldPlus = (stones: number) => (v: Field) => new Field(v.stones + stones);
-    const fullRoundTrips = () => Math.trunc(this[index].stones / 16);
+    const fullRoundTrips = () => Math.trunc(this[index].stones / this.length);
 
     return {
       newFieldArray: new FieldArray([...this]
@@ -174,7 +176,7 @@ export class FieldArray {
         .map(createFieldPlus(fullRoundTrips()))
         .map(ifInStepRange(createFieldPlus(1)))
       ),
-      lastSeatedIndex: (index + steps) % 16
+      lastSeatedIndex: (index + steps) % this.length
     }
   }
 }
