@@ -105,8 +105,6 @@
 <div id="actionLog"></div>
 
 <script>
-
-
   const eventDispatcher = (event, payload = {}) =>
     document.querySelector('body')
       .dispatchEvent(new CustomEvent(event, {bubbles: true, detail: payload}));
@@ -117,9 +115,20 @@
   const setupUi = (game) => {
     const setupFor = (player) => ({
       with: (fields) => {
+        const delegate = ({field, fieldIndex}) => field.addEventListener('click', () => eventDispatcher('play', {
+          boardSideId: player.side.id,
+          player,
+          fieldIndex
+        }));
 
-        fields.slice(0, 8).forEach((field, index) => field.addEventListener('click', () => player.take(index)));
-        fields.slice(8, 16).reverse().forEach((field, index) =>  field.addEventListener('click', () => player.take(index +8)));
+        fields.slice(0, 8)
+          .map((field, fieldIndex) => ({field, fieldIndex}))
+          .forEach(delegate);
+
+        fields.slice(8, 16)
+          .reverse()
+          .map((field, fieldIndex) => ({field, fieldIndex: fieldIndex + 8}))
+          .forEach(delegate);
 
         eventBus.addEventListener('endTurn', ({player: {name}}) =>
           fields.forEach((field) => field.disabled = (name === player.name)));

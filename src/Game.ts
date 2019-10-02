@@ -3,12 +3,11 @@ import {
   EventBus,
   EventDispatcher,
   EventPayload,
-  TakeErrorEvent,
-  TakeEvent,
-  TryStealEvent,
-  TryTakeEvent,
+  LogEvent,
+  PlayErrorEvent,
+  PlayEvent,
   TurnEvent
-} from "./event";
+} from "./events";
 import {uuidv4, when} from "./fn";
 
 export class Field {
@@ -29,68 +28,63 @@ export class Field {
 
 interface AllowedToTake {
   isAllowed: true;
-  map: <T>(f: (v: this) => T) => T
+  map: <T>(f: (v: this) => T) => T;
+  combine: (f: () => AllowedToTake | NotAllowedToTake) => AllowedToTake | NotAllowedToTake;
 }
 
 function createAllowedToTake(): AllowedToTake {
   return {
     isAllowed: true,
-    map: <T>(f: (v: AllowedToTake) => T) => f({isAllowed: true} as AllowedToTake)
-  }
+    map: <T>(f: (v: AllowedToTake) => T) => f({isAllowed: true} as AllowedToTake),
+    combine: (f: () => AllowedToTake | NotAllowedToTake): AllowedToTake | NotAllowedToTake => f()
+  };
 }
 
 export interface NotAllowedToTake {
   isAllowed: false;
   reason: string;
-  map: <T>(f: (v: NotAllowedToTake) => T) => T
+  map: <T>(f: (v: NotAllowedToTake) => T) => T;
+  combine: (f: () => AllowedToTake | NotAllowedToTake) => NotAllowedToTake;
 }
 
-interface NotAllowedBecauseNoStoneExists extends NotAllowedToTake {
-  reason: 'notAllowedBecauseNoStoneExists'
-}
 
-interface NotAllowedBecauseIndexOutOfBound extends NotAllowedToTake {
-  reason: 'notAllowedBecauseIndexOutOfBound'
-}
-
-function createNotAllowedBecauseNoStoneExists(): NotAllowedBecauseNoStoneExists {
-  return {
+function createNotAllowedBecause(reason: string): NotAllowedToTake {
+  const created: NotAllowedToTake = {
     isAllowed: false,
-    reason: 'notAllowedBecauseNoStoneExists',
-    map: <T>(f: (v: NotAllowedBecauseNoStoneExists) => T) => f({
-      isAllowed: false,
-      reason: 'notAllowedBecauseNoStoneExists'
-    } as NotAllowedBecauseNoStoneExists)
+    reason: `notAllowedBecause${reason}`,
+    combine: (): NotAllowedToTake => created,
+    map: <T>(f: (v: NotAllowedToTake) => T) => f(created)
+  };
+  return created;
+}
+
+
+interface PossibleToSteal {
+  isPossible: true,
+  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => PossibleToSteal | NotPossibleToSteal;
+}
+
+function createIsPossibleToSteal(): PossibleToSteal {
+  return {
+    isPossible: true,
+    combine: (f: () => PossibleToSteal | NotPossibleToSteal): PossibleToSteal | NotPossibleToSteal => f()
   }
 }
 
-function createNotAllowedBecauseIndexOutOfBound(): NotAllowedBecauseIndexOutOfBound {
-  return {
-    isAllowed: false,
-    reason: 'notAllowedBecauseIndexOutOfBound',
-    map: <T>(f: (v: NotAllowedBecauseIndexOutOfBound) => T) => f({
-      isAllowed: false,
-      reason: 'notAllowedBecauseIndexOutOfBound'
-    } as NotAllowedBecauseIndexOutOfBound)
-  }
+export interface NotPossibleToSteal {
+  isPossible: false;
+  reason: string,
+  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => NotPossibleToSteal
 }
 
-interface NotAllowedBecauseNotMinStones extends NotAllowedToTake {
-  reason: 'notAllowedBecauseNotMinStones'
+function createIsNotPossibleToStealBecause(reason: string): NotPossibleToSteal {
+  const created: NotPossibleToSteal = {
+    isPossible: false,
+    combine: () => created,
+    reason: `notPossibleBecause${reason}`
+  };
+  return created;
 }
-
-function createNotAllowedBecauseNotMinStones(): NotAllowedBecauseNotMinStones {
-  return {
-    isAllowed: false,
-    reason: 'notAllowedBecauseNotMinStones',
-    map: <T>(f: (v: NotAllowedBecauseNotMinStones) => T) => f({
-      isAllowed: false,
-      reason: 'notAllowedBecauseNotMinStones'
-    } as NotAllowedBecauseNotMinStones)
-  }
-}
-
-type IsAllowedToTakeResult = (AllowedToTake | NotAllowedBecauseNoStoneExists | NotAllowedBecauseNotMinStones | NotAllowedBecauseIndexOutOfBound);
 
 export class FieldArray {
   [key: number]: Field
@@ -134,17 +128,31 @@ export class FieldArray {
     ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
   }
 
-  public isAllowedToTake(index: number): IsAllowedToTakeResult {
-    const inIndexRange = (): IsAllowedToTakeResult => index >= 0 && index < this.length ? createAllowedToTake() : createNotAllowedBecauseIndexOutOfBound();
-    const existsStone = (): IsAllowedToTakeResult => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecauseNoStoneExists();
-    const minStones = (): IsAllowedToTakeResult => this[index].stones > 1 ? createAllowedToTake() : createNotAllowedBecauseNotMinStones();
+  public isAllowedToTake(index: number): (AllowedToTake | NotAllowedToTake) {
+    const inIndexRange = (): (AllowedToTake | NotAllowedToTake) => index >= 0 && index < this.length ? createAllowedToTake() : createNotAllowedBecause('IndexOutOfBound');
+    const existsStone = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecause('NoStoneExists');
+    const enoughStones = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 1 ? createAllowedToTake() : createNotAllowedBecause('NotEnoughStones');
     // if one rule returns false -> not allowed
-    const rules: Array<() => IsAllowedToTakeResult> = [
+    const rules: Array<() => (AllowedToTake | NotAllowedToTake)> = [
       inIndexRange,
       existsStone,
-      minStones
+      enoughStones
     ];
-    return rules.reduce((value, rule) => value.isAllowed ? rule() : value, {isAllowed: true} as IsAllowedToTakeResult);
+    return rules.reduce((result, rule) => result.combine(rule), createAllowedToTake() as (AllowedToTake | NotAllowedToTake));
+  }
+
+  public isPossibleToSteal(index: number): (PossibleToSteal | NotPossibleToSteal) {
+    const isInCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
+    const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
+
+    // if one rule returns false -> not possible
+    const rules: Array<() => (PossibleToSteal | NotPossibleToSteal)> = [
+      isInCorrectRow,
+      enoughStones
+    ];
+
+    return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
+    return rules.reduce((value, rule) => value.isPossible ? rule() : value, {isPossible: true} as (PossibleToSteal | NotPossibleToSteal));
   }
 
   public take(index: number): { newFieldArray: FieldArray, lastSeatedIndex: number } {
@@ -187,13 +195,10 @@ export class BoardSide {
     this.eventDispatcher = eventDispatcher;
     this.id = uuidv4();
     // todo: remove eventlistener if not current board
-    eventBus.addEventListener<TryTakeEvent>('tryTake', when(this.isThisBoard.bind(this), this.tryTake.bind(this)));
-    eventBus.addEventListener<TakeEvent>('take', when(this.isThisBoard.bind(this), this.take.bind(this)));
-    eventBus.addEventListener<TryStealEvent>('trySteal', when(this.isThisBoard.bind(this), this.trySteal.bind(this)));
-
+    eventBus.addEventListener<PlayEvent>('play', when(this.isThisBoard.bind(this), this.play.bind(this)));
   }
 
-  private isThisBoard({boardSideId}: EventPayload<TryTakeEvent>) {
+  private isThisBoard({boardSideId}: EventPayload<PlayEvent>) {
     return boardSideId === this.id
   }
 
@@ -205,64 +210,71 @@ export class BoardSide {
     return this.field[fieldIndex].stones;
   }
 
-  public tryTake(payload: EventPayload<TryTakeEvent>): EventPayload<TryTakeEvent> {
+  private log(msg: string): void {
+    this.eventDispatcher<LogEvent>('log', {msg});
+  }
+
+  public play(payload: EventPayload<PlayEvent>): EventPayload<PlayEvent> {
     const {player, fieldIndex} = payload;
-    const take = this.field.isAllowedToTake(fieldIndex);
-    if (take.isAllowed) {
-      this.eventDispatcher<TakeEvent>('take', {
-        player,
-        boardSideId: this.id,
-        fieldIndex,
-        stoneCount: this.field[fieldIndex].stones
-      });
+    const log = (msg: string) => this.log(`${player.name} ${msg}`);
+
+    log(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
+    const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
+    if (!isAllowedToTakeResult.isAllowed) {
+      this.eventDispatcher<PlayErrorEvent>('playError', {reason: isAllowedToTakeResult.reason});
+      log(`take ${BoardSide.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
       return payload;
     }
 
-    this.eventDispatcher<TakeErrorEvent>('takeError', {
-      player,
-      //@formatter:off
-      reason: take.map((error: NotAllowedToTake) => {
-        switch (error.reason) {
-          case "notAllowedBecauseNoStoneExists": return 'can not take because, there are no stones';
-          case "notAllowedBecauseNotMinStones":  return 'can not take, at least two stones are required';
-          case 'notAllowedBecauseIndexOutOfBound': return 'can not take, index out of bound';
-          default: return 'unknown';
-        }
-      }),
-      //@formatter:on
-      fieldIndex
-    });
-
-    return payload;
-  }
-
-  public take(payload: EventPayload<TakeEvent>): EventPayload<TakeEvent> {
-    const {player, fieldIndex} = payload;
+    log(`take ${BoardSide.indexToName(fieldIndex)} with ${this.field[fieldIndex].stones} ${this.field[fieldIndex].stones === 1 ? 'stone' : 'stones'}`);
     const {newFieldArray, lastSeatedIndex} = this.field.take(fieldIndex);
     this.field = newFieldArray;
 
-    this.eventDispatcher<TryStealEvent>('trySteal', {
-      player,
-      boardSideId: this.id,
-      fieldIndex: lastSeatedIndex,
-      stoneCount: this.field[lastSeatedIndex].stones
-    });
-    // distribute stones
+    log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
+    const isPossibleToStealResult = newFieldArray.isPossibleToSteal(fieldIndex);
+    log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.reason}`}`);
+    // this.eventDispatcher<TryStealEvent>('trySteal', {
+    //   player,
+    //   boardSideId: this.id,
+    //   fieldIndex: lastSeatedIndex,
+    //   stoneCount: this.field[lastSeatedIndex].stones
+    // });
+
     // steal phase
     // check win condition
     // check loose condition
     // check retake condition
     // end turn
-//    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
-    return payload;
-  }
-
-  public trySteal(payload: EventPayload<TryStealEvent>): EventPayload<TryStealEvent> {
-    console.warn('try steal' + payload.stoneCount);
     this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
     return payload;
   }
+
+  //
+  // public trySteal(payload: EventPayload<TryStealEvent>): EventPayload<TryStealEvent> {
+  //   console.warn('try steal' + payload.stoneCount);
+  //   this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
+  //   this.eventDispatcher<LogEvent>('log', {msg: `${payload.player.name} ends the turn.`});
+  //   return payload;
+  // }
+
+  private static indexToName(fieldIndex: number) {
+    return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16 - fieldIndex}`}`;
+  }
+
+  private static notAllowedToTakeToLogMessage(error: NotAllowedToTake) {
+    switch (error.reason) {
+      case "notAllowedBecauseNoStoneExists":
+        return 'can not take because, there are no stones';
+      case "notAllowedBecauseNotEnoughStones":
+        return 'can not take, at least two stones are required';
+      case 'notAllowedBecauseIndexOutOfBound':
+        return 'can not take, index out of bound';
+      default:
+        return 'unknown';
+    }
+  }
 }
+
 
 class Board {
   public readonly side0: BoardSide;
@@ -288,10 +300,6 @@ export class Player {
   public getStoneCountFor(fieldIndex: number): number {
     return this.side.getStoneCountFor(fieldIndex);
   }
-
-  public take(fieldIndex: number) {
-    this.eventDispatcher<TryTakeEvent>('tryTake', {boardSideId: this.side.id, player: this, fieldIndex});
-  }
 }
 
 export class Game {
@@ -308,7 +316,7 @@ export class Game {
 
     this.eventDispatcher = eventDispatcher;
     this.eventDispatcher<TurnEvent>('turn', {player: this.player0});
+    this.eventDispatcher<LogEvent>('log', {msg: `${this.player0.name} turn.`});
   }
 }
-
 

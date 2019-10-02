@@ -1,4 +1,4 @@
-import {Field, FieldArray, NotAllowedToTake} from '../src/Game'
+import {Field, FieldArray, NotAllowedToTake, NotPossibleToSteal} from '../src/Game'
 
 
 describe('fieldArray', () => {
@@ -16,7 +16,7 @@ describe('fieldArray', () => {
 
     it.each([
       [FieldArray.createFrom([2, 2]), 2, 'notAllowedBecauseIndexOutOfBound'],
-      [FieldArray.createFrom([1, 2]), 0, 'notAllowedBecauseNotMinStones'],
+      [FieldArray.createFrom([1, 2]), 0, 'notAllowedBecauseNotEnoughStones'],
       [FieldArray.createFrom([0, 2]), 0, 'notAllowedBecauseNoStoneExists']])(
       'not allowed to take with fieldArray:\n%s\n and %i because %s',
       (arr, index, reason) => {
@@ -65,10 +65,34 @@ describe('fieldArray', () => {
         const newArr = (arr as FieldArray).take(index as number).newFieldArray;
         try {
           expect(newArr).toEqual(expected);
-        }
-        catch {
+        } catch {
           throw new Error(`But was:\n${newArr.toString()}`)
         }
+      },
+    );
+  });
+
+  describe('isPossibleToSteal', () => {
+    it.each([
+      [FieldArray.createNewInitialized(), 0],
+      [FieldArray.createFrom([0, 0, 2, 0, 0, 0]), 2]
+    ])(
+      'possible to steal with fieldArray:\n%s\n and index %i',
+      (arr, index) => {
+        expect((arr as FieldArray).isPossibleToSteal(index as number).isPossible).toBe(true);
+      },
+    );
+
+    it.each([
+      [FieldArray.createNewInitialized(), 8, 'notPossibleBecauseSecondRow'],
+      [FieldArray.createFrom([2, 0, 0, 0, 2, 0]), 4, 'notPossibleBecauseSecondRow'],
+      [FieldArray.createFrom([0, 1, 0, 0, 0, 0]), 1, 'notPossibleBecauseNotEnoughStones']
+    ])(
+      'not possible to steal with fieldArray:\n%s\n and %i because %s',
+      (arr, index, reason) => {
+        const result = (arr as FieldArray).isPossibleToSteal(index as number);
+        expect(result.isPossible).toBe(false);
+        expect((result as NotPossibleToSteal).reason).toBe(reason);
       },
     );
   });
