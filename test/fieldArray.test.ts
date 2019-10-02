@@ -74,23 +74,27 @@ describe('fieldArray', () => {
 
   describe('isPossibleToSteal', () => {
     it.each([
-      [FieldArray.createNewInitialized(), 0],
-      [FieldArray.createFrom([0, 0, 2, 0, 0, 0]), 2]
+      [FieldArray.createNewInitialized(), 0, FieldArray.createFullFrom(FieldArray.createNewInitialized())],
+      [FieldArray.createFrom([0, 0, 2, 0, 0, 0]), 2, FieldArray.createFullFrom({length: 6})],
+      [FieldArray.createFrom([2, 0, 0, 0, 0, 0]), 0, FieldArray.createFrom([0, 0, 2, 0, 0, 0])],
+      [FieldArray.createFrom([0, 2, 0, 0, 0, 0]), 1, FieldArray.createFrom([0, 2, 0, 0, 0, 0])],
+      [FieldArray.createFrom([0, 0, 2, 0, 0, 0]), 2, FieldArray.createFrom([2, 0, 0, 0, 0, 0])]
     ])(
-      'possible to steal with fieldArray:\n%s\n and index %i',
-      (arr, index) => {
-        expect((arr as FieldArray).isPossibleToSteal(index as number).isPossible).toBe(true);
+      'possible to steal with fieldArray:\n%s\n and index %i and OtherFieldArray:\n%s\n',
+      (arr, index, other) => {
+        expect((arr as FieldArray).isPossibleToSteal(index as number, other as FieldArray).isPossible).toBe(true);
       },
     );
 
     it.each([
-      [FieldArray.createNewInitialized(), 8, 'notPossibleBecauseSecondRow'],
-      [FieldArray.createFrom([2, 0, 0, 0, 2, 0]), 4, 'notPossibleBecauseSecondRow'],
-      [FieldArray.createFrom([0, 1, 0, 0, 0, 0]), 1, 'notPossibleBecauseNotEnoughStones']
+      [FieldArray.createNewInitialized(), 8, FieldArray.createFullFrom(FieldArray.createNewInitialized()), 'notPossibleBecauseSecondRow'],
+      [FieldArray.createFrom([2, 0, 0, 0, 2, 0]), 4, FieldArray.createFullFrom(FieldArray.createNewInitialized()), 'notPossibleBecauseSecondRow'],
+      [FieldArray.createFrom([0, 1, 0, 0, 0, 0]), 1, FieldArray.createFullFrom(FieldArray.createNewInitialized()), 'notPossibleBecauseNotEnoughStones'],
+      [FieldArray.createFrom([2, 0, 0, 0, 0, 0]), 0, FieldArray.createFrom([2, 2, 0, 2, 2, 2]), 'notPossibleBecauseOtherSideHasNoStones'],
     ])(
-      'not possible to steal with fieldArray:\n%s\n and %i because %s',
-      (arr, index, reason) => {
-        const result = (arr as FieldArray).isPossibleToSteal(index as number);
+      'not possible to steal with fieldArray:\n%s\n and %i and otherFieldArray:\n%s\n because %s',
+      (arr, index, other, reason) => {
+        const result = (arr as FieldArray).isPossibleToSteal(index as number, other as FieldArray);
         expect(result.isPossible).toBe(false);
         expect((result as NotPossibleToSteal).reason).toBe(reason);
       },

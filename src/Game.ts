@@ -110,6 +110,10 @@ export class FieldArray {
     return FieldArray.createFrom(Array.from({length: 16}, (v, i) => i > 3 && i < 8 ? 0 : 2));
   }
 
+  public static createFullFrom({length}: { length: number }): FieldArray {
+    return FieldArray.createFrom(Array.from({length}, (v, i) => 2));
+  }
+
   * [Symbol.iterator]() {
     for (let i = 0; i < this.length; i++) {
       yield this[i];
@@ -141,23 +145,22 @@ export class FieldArray {
     return rules.reduce((result, rule) => result.combine(rule), createAllowedToTake() as (AllowedToTake | NotAllowedToTake));
   }
 
-  public isPossibleToSteal(index: number): (PossibleToSteal | NotPossibleToSteal) {
-    const isInCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
+  public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal | NotPossibleToSteal) {
+    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
     const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
-
+    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[(Math.abs(this.length / 2 - index) - 1)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
     // if one rule returns false -> not possible
     const rules: Array<() => (PossibleToSteal | NotPossibleToSteal)> = [
-      isInCorrectRow,
-      enoughStones
+      inCorrectRow,
+      enoughStones,
+      otherSideHasStones
     ];
 
     return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
-    return rules.reduce((value, rule) => value.isPossible ? rule() : value, {isPossible: true} as (PossibleToSteal | NotPossibleToSteal));
   }
 
   public take(index: number): { newFieldArray: FieldArray, lastSeatedIndex: number } {
     const steps = this[index].stones % this.length;
-
     const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number) => i === index ? f(v) : v;
     const isNextField = (from: number) => (v: Field, i: number) => {
       const nextField = from === this.length - 1 ? 0 : from + 1;
@@ -186,12 +189,14 @@ export class FieldArray {
 }
 
 export class BoardSide {
-  private field: FieldArray;
+  field: FieldArray;
   public readonly id: string;
   private readonly eventDispatcher: EventDispatcher;
+  private readonly board: Board;
 
-  constructor(field: FieldArray, eventDispatcher: EventDispatcher, eventBus: EventBus) {
+  constructor(field: FieldArray, board: Board, eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.field = field;
+    this.board = board;
     this.eventDispatcher = eventDispatcher;
     this.id = uuidv4();
     // todo: remove eventlistener if not current board
@@ -231,7 +236,7 @@ export class BoardSide {
     this.field = newFieldArray;
 
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
-    const isPossibleToStealResult = newFieldArray.isPossibleToSteal(fieldIndex);
+    const isPossibleToStealResult = newFieldArray.isPossibleToSteal(lastSeatedIndex, this.board.getOtherSide(this).field);
     log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.reason}`}`);
     // this.eventDispatcher<TryStealEvent>('trySteal', {
     //   player,
@@ -281,8 +286,12 @@ class Board {
   public readonly side1: BoardSide;
 
   constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
-    this.side0 = new BoardSide(FieldArray.createNewInitialized(), eventDispatcher, eventBus);
-    this.side1 = new BoardSide(FieldArray.createNewInitialized(), eventDispatcher, eventBus);
+    this.side0 = new BoardSide(FieldArray.createNewInitialized(), this, eventDispatcher, eventBus);
+    this.side1 = new BoardSide(FieldArray.createNewInitialized(), this, eventDispatcher, eventBus);
+  }
+
+  public getOtherSide(side: BoardSide): BoardSide {
+    return side.id === this.side0.id ? this.side1 : this.side0;
   }
 }
 
