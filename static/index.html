@@ -105,21 +105,39 @@
 <div id="actionLog"></div>
 
 <script>
+  const uuidv4 = window.define.modules.fn.uuidv4;
   const eventDispatcher = (event, payload = {}) =>
     document.querySelector('body')
       .dispatchEvent(new CustomEvent(event, {bubbles: true, detail: payload}));
 
   const eventBus = document.querySelector('body');
-  const orgAddEventListener = eventBus.addEventListener;
-  eventBus.addEventListener = (event, cb) => orgAddEventListener(event, ({detail}) => cb(detail));
+  const {addEventListener: orgAddEventListener, removeEventListener: orgRemoveEventListener} = eventBus;
+  let cbTable = {};
+  eventBus.addEventListener = (event, cb) => {
+    const wrapped = ({detail}) => cb(detail);
+    cb.id = uuidv4();
+    cbTable = {...cbTable, [cb.id]: wrapped};
+    return orgAddEventListener(event, wrapped);
+  };
+  eventBus.removeEventListener = (event, cb) => {
+    const fn = cbTable[cb.id];
+    const result = orgRemoveEventListener(event, fn);
+    delete cbTable[cb.id];
+    return result;
+  };
+
   const setupUi = (game) => {
     const setupFor = (player) => ({
       with: (fields) => {
-        const delegate = ({field, fieldIndex}) => field.addEventListener('click', () => eventDispatcher('play', {
-          boardSideId: player.side.id,
-          player,
-          fieldIndex
-        }));
+        const delegate = ({field, fieldIndex}) => field.addEventListener('click', () => {
+          const {own: boardSide, other: otherBoardSide} = game.board.getBoardSidesFor(player);
+          return eventDispatcher('play', {
+            boardSide,
+            otherBoardSide,
+            player,
+            fieldIndex
+          });
+        });
 
         fields.slice(0, 8)
           .map((field, fieldIndex) => ({field, fieldIndex}))
@@ -142,13 +160,13 @@
     setupFor(game.player1).with([...document.querySelectorAll('.player1')].reverse());
   };
 
-  const render = (game) => {
+  const render = (side0, side1) => {
     const arr0 = [...document.querySelectorAll('.player0')];
-    arr0.slice(0, 8).forEach((field, index) => field.value = game.player0.getStoneCountFor(index));
-    arr0.slice(8, 16).reverse().forEach((field, index) => field.value = game.player0.getStoneCountFor(index + 8));
+    arr0.slice(0, 8).forEach((field, index) => field.value = side0.getStoneCountFor(index));
+    arr0.slice(8, 16).reverse().forEach((field, index) => field.value = side0.getStoneCountFor(index + 8));
     const arr1 = [...document.querySelectorAll('.player1')].reverse();
-    arr1.slice(0, 8).forEach((field, index) => field.value = game.player1.getStoneCountFor(index));
-    arr1.slice(8, 16).reverse().forEach((field, index) => field.value = game.player1.getStoneCountFor(index + 8));
+    arr1.slice(0, 8).forEach((field, index) => field.value = side1.getStoneCountFor(index));
+    arr1.slice(8, 16).reverse().forEach((field, index) => field.value = side1.getStoneCountFor(index + 8));
   };
   //
 
@@ -156,12 +174,15 @@
   // new window.define.modules.ActionLog.ConsoleActionLog(eventBus);
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
-  render(game);
+  render(game.board.side0, game.board.side1);
 
-  eventBus.addEventListener('endTurn', () => {
-    render(game);
-  })
-
+  eventBus.addEventListener('endTurn', ({player, boardSide, otherBoardSide}) => {
+    if (game.player0.name === player.name) {
+      render(boardSide, otherBoardSide);
+    } else {
+      render(otherBoardSide, boardSide);
+    }
+  });
 
 </script>
 

@@ -1,4 +1,4 @@
-import {Player} from "./Game";
+import {BoardSide, Player} from "./Game";
 
 export type Events = string;
 //todo turn AND endturn necessary?
@@ -11,8 +11,8 @@ export type LogEvent = 'log';
 //@formatter:off
 export type EventPayload<E> =
   E extends TurnEvent ? { player: Player } :
-  E extends EndTurnEvent ? { player: Player } :
-  E extends PlayEvent ? { player: Player, boardSideId: string, fieldIndex: number } :
+  E extends EndTurnEvent ? { player: Player, boardSide: BoardSide, otherBoardSide: BoardSide } :
+  E extends PlayEvent ? { player: Player, boardSide: BoardSide, otherBoardSide: BoardSide, fieldIndex: number } :
   E extends PlayErrorEvent ? {reason: string} :
   E extends LogEvent ? {msg: string} :
   unknown;

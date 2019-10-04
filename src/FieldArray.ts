@@ -122,20 +122,7 @@ export class FieldArray {
     return rules.reduce((result, rule) => result.combine(rule), createAllowedToTake() as (AllowedToTake | NotAllowedToTake));
   }
 
-  public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal | NotPossibleToSteal) {
-    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
-    const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
-    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[(Math.abs(this.length / 2 - index) - 1)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
-    // if one rule returns false -> not possible
-    const rules: Array<() => (PossibleToSteal | NotPossibleToSteal)> = [
-      inCorrectRow,
-      enoughStones,
-      otherSideHasStones
-    ];
-    return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
-  }
-
-  public take(index: number): { newFieldArray: FieldArray, lastSeatedIndex: number } {
+  public take(index: number): { updated: FieldArray, lastSeatedIndex: number } {
     const steps = this[index].stones % this.length;
     const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number) => i === index ? f(v) : v;
     const isNextField = (from: number) => (v: Field, i: number) => {
@@ -154,12 +141,39 @@ export class FieldArray {
     const fullRoundTrips = () => Math.trunc(this[index].stones / this.length);
 
     return {
-      newFieldArray: new FieldArray(this.toArray()
+      updated: new FieldArray(this.toArray()
         .map(ifTakenField(createZeroField))
         .map(createFieldPlus(fullRoundTrips()))
         .map(ifInStepRange(createFieldPlus(1)))
       ),
       lastSeatedIndex: (index + steps) % this.length
     }
+  }
+
+  public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal | NotPossibleToSteal) {
+    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
+    const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
+    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[(Math.abs(this.length / 2 - index) - 1)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
+    // if one rule returns false -> not possible
+    const rules: Array<() => (PossibleToSteal | NotPossibleToSteal)> = [
+      inCorrectRow,
+      enoughStones,
+      otherSideHasStones
+    ];
+    return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
+  }
+
+  public steal(index: number, other: FieldArray): { updated: FieldArray, updatedStolenFrom: FieldArray } {
+    if (!this.isPossibleToSteal(index, other)) {
+      return {
+        updated: this,
+        updatedStolenFrom: other
+      };
+    }
+    // todo
+    return {
+      updated: this,
+      updatedStolenFrom: other
+    };
   }
 }

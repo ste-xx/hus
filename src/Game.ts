@@ -15,19 +15,31 @@ export class BoardSide {
   field: FieldArray;
   public readonly id: string;
   private readonly eventDispatcher: EventDispatcher;
-  private readonly board: Board;
+  private readonly eventBus: EventBus;
+  private readonly playFn: (x: EventPayload<PlayEvent>) => EventPayload<PlayEvent>;
+  private readonly iteration: number;
 
-  constructor(field: FieldArray, board: Board, eventDispatcher: EventDispatcher, eventBus: EventBus) {
+  private constructor(id: string, field: FieldArray, iteration: number, eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.field = field;
-    this.board = board;
     this.eventDispatcher = eventDispatcher;
-    this.id = uuidv4();
-    // todo: remove eventlistener if not current board
-    eventBus.addEventListener<PlayEvent>('play', when(this.isThisBoard.bind(this), this.play.bind(this)));
+    this.id = id;
+    this.iteration = iteration;
+    this.eventBus = eventBus;
+    this.playFn = when(this.isThisBoard.bind(this), this.play.bind(this));
+    this.eventBus.addEventListener<PlayEvent>('play', this.playFn);
   }
 
-  private isThisBoard({boardSideId}: EventPayload<PlayEvent>) {
-    return boardSideId === this.id
+  public static createNew(eventDispatcher: EventDispatcher, eventBus: EventBus): BoardSide {
+    return new BoardSide(uuidv4(), FieldArray.createNewInitialized(), 0, eventDispatcher, eventBus);
+  }
+
+  private static createNewVersionFrom(boardSide: BoardSide, field: FieldArray): BoardSide {
+    boardSide.shutdown();
+    return new BoardSide(boardSide.id, field, boardSide.iteration + 1, boardSide.eventDispatcher, boardSide.eventBus);
+  }
+
+  private isThisBoard({boardSide}: EventPayload<PlayEvent>) {
+    return boardSide.id === this.id
   }
 
   public existsStonesFor(fieldIndex: number) {
@@ -43,7 +55,7 @@ export class BoardSide {
   }
 
   public play(payload: EventPayload<PlayEvent>): EventPayload<PlayEvent> {
-    const {player, fieldIndex} = payload;
+    const {player, fieldIndex, otherBoardSide} = payload;
     const log = (msg: string) => this.log(`${player.name} ${msg}`);
 
     log(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
@@ -55,29 +67,32 @@ export class BoardSide {
     }
 
     log(`take ${BoardSide.indexToName(fieldIndex)} with ${this.field[fieldIndex].stones} ${this.field[fieldIndex].stones === 1 ? 'stone' : 'stones'}`);
-    const {newFieldArray, lastSeatedIndex} = this.field.take(fieldIndex);
-    this.field = newFieldArray;
-
+    const {updated: afterTake, lastSeatedIndex} = this.field.take(fieldIndex);
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
-    const isPossibleToStealResult = newFieldArray.isPossibleToSteal(lastSeatedIndex, this.board.getOtherSide(this).field);
+    //todo: change other side
+    const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherBoardSide.field);
     log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}`}`);
+    // todo implement steal
+    const {updated: afterSteal, updatedStolenFrom} = afterTake.steal(lastSeatedIndex, otherBoardSide.field);
+    //todo: do not use reference, create a new boardside instead
+    this.field = afterSteal;
     // todo implement steal
     // steal phase
     // check win condition
     // check loose condition
     // check retake condition
     // end turn
-    this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
+    this.eventDispatcher<EndTurnEvent>('endTurn', {
+      player: payload.player,
+      boardSide: BoardSide.createNewVersionFrom(this, afterSteal),
+      otherBoardSide: BoardSide.createNewVersionFrom(otherBoardSide, updatedStolenFrom)
+    });
     return payload;
   }
 
-  //
-  // public trySteal(payload: EventPayload<TryStealEvent>): EventPayload<TryStealEvent> {
-  //   console.warn('try steal' + payload.stoneCount);
-  //   this.eventDispatcher<EndTurnEvent>('endTurn', {player: payload.player});
-  //   this.eventDispatcher<LogEvent>('log', {msg: `${payload.player.name} ends the turn.`});
-  //   return payload;
-  // }
+  private shutdown() {
+    this.eventBus.removeEventListener('play', this.playFn);
+  }
 
   private static indexToName(fieldIndex: number) {
     return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16 - fieldIndex}`}`;
@@ -111,35 +126,40 @@ export class BoardSide {
 }
 
 class Board {
-  public readonly side0: BoardSide;
-  public readonly side1: BoardSide;
+  public side0: BoardSide;
+  public side1: BoardSide;
+  private player0: Player;
+  private player1: Player;
 
-  constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
-    this.side0 = new BoardSide(FieldArray.createNewInitialized(), this, eventDispatcher, eventBus);
-    this.side1 = new BoardSide(FieldArray.createNewInitialized(), this, eventDispatcher, eventBus);
+  constructor(player0: Player, player1: Player, eventDispatcher: EventDispatcher, eventBus: EventBus) {
+    this.player0 = player0;
+    this.player1 = player1;
+    this.side0 = BoardSide.createNew(eventDispatcher, eventBus);
+    this.side1 = BoardSide.createNew(eventDispatcher, eventBus);
+
+    eventBus.addEventListener<EndTurnEvent>('endTurn', ({boardSide, otherBoardSide}) => {
+      this.side0 = boardSide.id === this.side0.id ? boardSide : otherBoardSide;
+      this.side1 = boardSide.id === this.side1.id ? boardSide : otherBoardSide;
+    });
   }
 
-  public getOtherSide(side: BoardSide): BoardSide {
-    return side.id === this.side0.id ? this.side1 : this.side0;
+  public getBoardSidesFor(player: Player): { own: BoardSide, other: BoardSide } {
+    return {
+      own: player.name === this.player0.name ? this.side0 : this.side1,
+      other: player.name === this.player0.name ? this.side1 : this.side0
+    };
   }
 }
 
 export class Player {
-  private side: BoardSide;
   public name: string;
-  public eventDispatcher: EventDispatcher;
 
-  constructor(name: string, side: BoardSide, eventDispatcher: EventDispatcher) {
+  constructor(name: string) {
     this.name = name;
-    this.side = side;
-    this.eventDispatcher = eventDispatcher;
-  }
-
-  public getStoneCountFor(fieldIndex: number): number {
-    return this.side.getStoneCountFor(fieldIndex);
   }
 }
 
+// todo: fix event listener issue
 export class Game {
   public player0: Player;
   public player1: Player;
@@ -147,10 +167,10 @@ export class Game {
   public eventDispatcher: EventDispatcher;
 
   constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
-    this.board = new Board(eventDispatcher, eventBus);
+    this.player0 = new Player('Player 1');
+    this.player1 = new Player('Player 2');
 
-    this.player0 = new Player('Player 1', this.board.side0, eventDispatcher);
-    this.player1 = new Player('Player 2', this.board.side1, eventDispatcher);
+    this.board = new Board(this.player0, this.player1, eventDispatcher, eventBus);
 
     this.eventDispatcher = eventDispatcher;
     this.eventDispatcher<TurnEvent>('turn', {player: this.player0});
