@@ -12,7 +12,7 @@ import {uuidv4, when} from "./fn";
 import {FieldArray, NotAllowedToTake, NotPossibleToSteal} from "./FieldArray";
 
 export class BoardSide {
-  field: FieldArray;
+  readonly field: FieldArray;
   public readonly id: string;
   private readonly eventDispatcher: EventDispatcher;
   private readonly eventBus: EventBus;
@@ -69,14 +69,11 @@ export class BoardSide {
     log(`take ${BoardSide.indexToName(fieldIndex)} with ${this.field[fieldIndex].stones} ${this.field[fieldIndex].stones === 1 ? 'stone' : 'stones'}`);
     const {updated: afterTake, lastSeatedIndex} = this.field.take(fieldIndex);
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
-    //todo: change other side
     const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherBoardSide.field);
     log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}`}`);
     // todo implement steal
     const {updated: afterSteal, updatedStolenFrom} = afterTake.steal(lastSeatedIndex, otherBoardSide.field);
-    //todo: do not use reference, create a new boardside instead
-    this.field = afterSteal;
-    // todo implement steal
+
     // steal phase
     // check win condition
     // check loose condition
@@ -159,7 +156,6 @@ export class Player {
   }
 }
 
-// todo: fix event listener issue
 export class Game {
   public player0: Player;
   public player1: Player;
