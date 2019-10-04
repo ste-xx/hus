@@ -112,16 +112,16 @@ describe('FieldArray', () => {
     ])(
       'steal with fieldArray:\n%s\n and index %i and fieldArray:\n%s\n, expected: \n%s\n and \n%s\n',
       (arr, other, index, expected, expectedStolenFrom) => {
-        const {updated, updatedStolenFrom} = (arr as FieldArray).steal(index as number, other as FieldArray);
+        const {updated, otherAfterStolenFrom} = (arr as FieldArray).steal(index as number, other as FieldArray);
         try {
           expect(updated).toEqual(expected);
         } catch {
           throw new Error(`But updated was:\n${updated.toString()}`)
         }
         try {
-          expect(updatedStolenFrom).toEqual(expectedStolenFrom);
+          expect(otherAfterStolenFrom).toEqual(expectedStolenFrom);
         } catch {
-          throw new Error(`But updatedStolenFrom was:\n${updatedStolenFrom.toString()}`)
+          throw new Error(`But updatedStolenFrom was:\n${otherAfterStolenFrom.toString()}`)
         }
       },
     );

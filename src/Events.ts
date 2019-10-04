@@ -6,6 +6,8 @@ export type TurnEvent = 'turn';
 export type EndTurnEvent = 'endTurn';
 export type PlayEvent = 'play';
 export type PlayErrorEvent = 'playError';
+export type FinishGameWinEvent = 'finishGameWin';
+export type FinishGameLoseEvent = 'finishGameLose';
 export type LogEvent = 'log';
 
 //@formatter:off
@@ -14,6 +16,8 @@ export type EventPayload<E> =
   E extends EndTurnEvent ? { player: Player, boardSide: BoardSide, otherBoardSide: BoardSide } :
   E extends PlayEvent ? { player: Player, boardSide: BoardSide, otherBoardSide: BoardSide, fieldIndex: number } :
   E extends PlayErrorEvent ? {reason: string} :
+  E extends FinishGameWinEvent ? {player: Player, boardSide: BoardSide, otherBoardSide: BoardSide} :
+  E extends FinishGameLoseEvent ? {player: Player, boardSide: BoardSide, otherBoardSide: BoardSide} :
   E extends LogEvent ? {msg: string} :
   unknown;
 //formatter:on

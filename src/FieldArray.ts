@@ -163,11 +163,11 @@ export class FieldArray {
     return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
   }
 
-  public steal(index: number, other: FieldArray): { updated: FieldArray, updatedStolenFrom: FieldArray } {
+  public steal(index: number, other: FieldArray): { updated: FieldArray, otherAfterStolenFrom: FieldArray } {
     if (!this.isPossibleToSteal(index, other).isPossible) {
       return {
         updated: this,
-        updatedStolenFrom: other
+        otherAfterStolenFrom: other
       };
     }
 
@@ -181,8 +181,15 @@ export class FieldArray {
       updated: new FieldArray(this.toArray()
         .map(ifSeatedField(stealFrom(other)))
       ),
-      updatedStolenFrom: new FieldArray(other.toArray()
+      otherAfterStolenFrom: new FieldArray(other.toArray()
         .map(ifStolenField(createZeroField)))
     };
+  }
+
+  public isInLoseCondition(): boolean {
+    const result = Array.from(this)
+      .slice(0, this.length / 2)
+      .reduce((acc, {stones}) => acc && stones < 2, true);
+    return result;
   }
 }
