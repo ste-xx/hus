@@ -67,19 +67,20 @@ export class BoardSide {
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
     const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherBoardSide.field);
     log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}`}`);
-    // todo implement steal
     const {updated: afterSteal, updatedStolenFrom} = afterTake.steal(lastSeatedIndex, otherBoardSide.field);
 
-    // steal phase
+    //todo:
     // check win condition
     // check loose condition
     // check retake condition
-    // end turn
+    //   take steal check retake
+
     this.eventDispatcher<EndTurnEvent>('endTurn', {
       player: payload.player,
       boardSide: BoardSide.createNewVersionFrom(this, afterSteal),
       otherBoardSide: BoardSide.createNewVersionFrom(otherBoardSide, updatedStolenFrom)
     });
+    this.log('\n');
     return payload;
   }
 

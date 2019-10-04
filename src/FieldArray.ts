@@ -164,16 +164,25 @@ export class FieldArray {
   }
 
   public steal(index: number, other: FieldArray): { updated: FieldArray, updatedStolenFrom: FieldArray } {
-    if (!this.isPossibleToSteal(index, other)) {
+    if (!this.isPossibleToSteal(index, other).isPossible) {
       return {
         updated: this,
         updatedStolenFrom: other
       };
     }
-    // todo
+
+    const ifSeatedField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === index ? f(v, i) : v;
+    const stealFrom = (other: FieldArray) => (v: Field, i: number) => new Field(v.stones + other[(Math.abs(this.length / 2 - i) - 1)].stones);
+
+    const ifStolenField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === (Math.abs(this.length / 2 - index) - 1) ? f(v, i) : v;
+    const createZeroField = () => new Field(0);
+
     return {
-      updated: this,
-      updatedStolenFrom: other
+      updated: new FieldArray(this.toArray()
+        .map(ifSeatedField(stealFrom(other)))
+      ),
+      updatedStolenFrom: new FieldArray(other.toArray()
+        .map(ifStolenField(createZeroField)))
     };
   }
 }

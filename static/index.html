@@ -10,6 +10,12 @@
             justify-self: center;
         }
 
+        body {
+            display: flex;
+            height: 100%;
+            flex-direction: column;
+        }
+
     </style>
     <script>
       window.define = function (name, required, moduleFn) {
@@ -102,7 +108,7 @@
 </div>
 
 <h2>Action Log:</h2>
-<div id="actionLog"></div>
+<div id="actionLog" style="overflow: auto; flex: 1"></div>
 
 <script>
   const uuidv4 = window.define.modules.fn.uuidv4;

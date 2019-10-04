@@ -19,6 +19,7 @@ export class HTMLActionLog extends ActionLog {
 
   log(msg: string): void {
     this.target.innerHTML += `${msg} <br>`;
+    this.target.scrollTop = this.target.scrollHeight;
   }
 }
 

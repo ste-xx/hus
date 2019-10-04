@@ -61,11 +61,11 @@ describe('FieldArray', () => {
     ])(
       'take with fieldArray:\n%s\n and index %i, expected: \n%s\n',
       (arr, index, expected) => {
-        const newArr = (arr as FieldArray).take(index as number).newFieldArray;
+        const updated = (arr as FieldArray).take(index as number).updated;
         try {
-          expect(newArr).toEqual(expected);
+          expect(updated).toEqual(expected);
         } catch {
-          throw new Error(`But was:\n${newArr.toString()}`)
+          throw new Error(`But was:\n${updated.toString()}`)
         }
       },
     );
@@ -96,6 +96,33 @@ describe('FieldArray', () => {
         const result = (arr as FieldArray).isPossibleToSteal(index as number, other as FieldArray);
         expect(result.isPossible).toBe(false);
         expect((result as NotPossibleToSteal).reason).toBe(reason);
+      },
+    );
+  });
+
+  describe('steal', () => {
+    it.each([
+      [
+        FieldArray.createFrom([2, 0, 0, 0, 0, 0]),
+        FieldArray.createFrom([0, 0, 2, 0, 0, 0]),
+        0,
+        FieldArray.createFrom([4, 0, 0, 0, 0, 0]),
+        FieldArray.createFrom([0, 0, 0, 0, 0, 0])
+      ]
+    ])(
+      'steal with fieldArray:\n%s\n and index %i and fieldArray:\n%s\n, expected: \n%s\n and \n%s\n',
+      (arr, other, index, expected, expectedStolenFrom) => {
+        const {updated, updatedStolenFrom} = (arr as FieldArray).steal(index as number, other as FieldArray);
+        try {
+          expect(updated).toEqual(expected);
+        } catch {
+          throw new Error(`But updated was:\n${updated.toString()}`)
+        }
+        try {
+          expect(updatedStolenFrom).toEqual(expectedStolenFrom);
+        } catch {
+          throw new Error(`But updatedStolenFrom was:\n${updatedStolenFrom.toString()}`)
+        }
       },
     );
   });
