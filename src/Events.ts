@@ -16,8 +16,7 @@ export type EventPayload<E> =
   E extends PlayErrorEvent ? {reason: string} :
   E extends LogEvent ? {msg: string} :
   unknown;
-//formattor:on
-
+//formatter:on
 
 export type EventDispatcher = <E extends Events>(event: E, payload: EventPayload<E>) => void;
 

@@ -1,7 +1,6 @@
-import {Field, FieldArray, NotAllowedToTake, NotPossibleToSteal} from '../src/Game'
+import {FieldArray, NotAllowedToTake, NotPossibleToSteal} from '../src/FieldArray'
 
-
-describe('fieldArray', () => {
+describe('FieldArray', () => {
   describe('isAllowedToTake', () => {
     it.each([
       [FieldArray.createFrom([2, 2]), 0],
