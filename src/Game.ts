@@ -42,10 +42,6 @@ export class BoardSide {
     return boardSide.id === this.id
   }
 
-  public existsStonesFor(fieldIndex: number) {
-    return this.field[fieldIndex].isNotEmpty();
-  };
-
   public getStoneCountFor(fieldIndex: number) {
     return this.field[fieldIndex].stones;
   }
