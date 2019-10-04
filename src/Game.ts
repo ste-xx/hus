@@ -54,66 +54,53 @@ export class BoardSide {
 
   public play(payload: EventPayload<PlayEvent>): EventPayload<PlayEvent> {
     const {player, fieldIndex, otherBoardSide} = payload;
-    const log = (msg: string) => this.log(`${player.name} ${msg}`);
+    const logWithPrefix = (msg: string) => this.log(`${player.name} ${msg}`);
 
-    log(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
+    logWithPrefix(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
     const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
     if (!isAllowedToTakeResult.isAllowed) {
       this.eventDispatcher<PlayErrorEvent>('playError', {reason: isAllowedToTakeResult.reason});
-      log(`take ${BoardSide.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
+      logWithPrefix(`take ${BoardSide.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
       return payload;
     }
-    const {updated: afterRetake, otherUpdated: otherAfterRetake} = this.retake(fieldIndex, this.field, otherBoardSide.field, log, true);
+    const {updated, otherUpdated} = this.take(fieldIndex, this.field, otherBoardSide.field, logWithPrefix, true);
 
-    const updatedBoardSide = BoardSide.createNewVersionFrom(this, afterRetake);
-    const updatedOtherBoardSide = BoardSide.createNewVersionFrom(otherBoardSide, otherAfterRetake);
     const eventPayload = {
       player,
-      boardSide: updatedBoardSide,
-      otherBoardSide: updatedOtherBoardSide
+      boardSide: BoardSide.createNewVersionFrom(this, updated),
+      otherBoardSide: BoardSide.createNewVersionFrom(otherBoardSide, otherUpdated)
     };
 
-    if (updatedOtherBoardSide.isInLoseCondition()) {
-      log(`wins`);
+    if (otherUpdated.isInLoseCondition()) {
+      logWithPrefix(`wins`);
       this.eventDispatcher<FinishGameWinEvent>('finishGameWin', eventPayload)
-      return payload;
-    }
-    if (updatedBoardSide.isInLoseCondition()) {
-      log(`lose`);
+    } else if (updated.isInLoseCondition()) {
+      logWithPrefix(`lose`);
       this.eventDispatcher<FinishGameLoseEvent>('finishGameLose', eventPayload);
-      return payload;
+    } else {
+      this.eventDispatcher<EndTurnEvent>('endTurn', eventPayload);
+      this.log('\n');
     }
-
-    this.eventDispatcher<EndTurnEvent>('endTurn', {
-      player,
-      boardSide: updatedBoardSide,
-      otherBoardSide: updatedOtherBoardSide
-    });
-    this.log('\n');
     return payload;
   }
 
-  private retake(index: number, arr: FieldArray, otherArr: FieldArray, log: (msg: string) => void, first: boolean): { updated: FieldArray, otherUpdated: FieldArray } {
+  private take(index: number, arr: FieldArray, otherArr: FieldArray, log: (msg: string) => void, first: boolean): { updated: FieldArray, otherUpdated: FieldArray } {
     if (otherArr.isInLoseCondition() || arr.isInLoseCondition()) {
-      return {
-        updated: arr,
-        otherUpdated: otherArr
+      return {updated: arr, otherUpdated: otherArr};
+    }
+    const logIfNotFirst = (msg: string) => {
+      if (!first) {
+        log(msg);
       }
-    }
+    };
 
-    if (!first) {
-      log(`tries to ${first ? 'take' : 'retake'} ${BoardSide.indexToName(index)}`);
-    }
+    logIfNotFirst(`tries to retake ${BoardSide.indexToName(index)}`);
     const isAllowedToTakeResult = arr.isAllowedToTake(index);
     if (!isAllowedToTakeResult.isAllowed) {
-      if (!first) {
-        log(`can not retake`);
-      }
-      return {
-        updated: arr,
-        otherUpdated: otherArr
-      }
+      logIfNotFirst(`can not retake`);
+      return {updated: arr, otherUpdated: otherArr};
     }
+
     const printStones = (arr: FieldArray, index: number) => `${arr[index].stones} ${arr[index].stones === 1 ? 'stone' : 'stones'}`;
     log(`${first ? 'take' : 'retake'} ${BoardSide.indexToName(index)} with ${printStones(arr, index)}`);
     const {updated: afterTake, lastSeatedIndex} = arr.take(index);
@@ -121,11 +108,8 @@ export class BoardSide {
     const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherArr);
     log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}`}`);
     const {updated: afterSteal, otherAfterStolenFrom} = afterTake.steal(lastSeatedIndex, otherArr);
-    return this.retake(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
-  }
-
-  public isInLoseCondition() {
-    return this.field.isInLoseCondition();
+    log(`new stone count on position ${BoardSide.indexToName(lastSeatedIndex)}: ${printStones(afterSteal, lastSeatedIndex)}`);
+    return this.take(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
   }
 
   private shutdown() {
