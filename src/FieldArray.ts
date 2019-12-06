@@ -67,10 +67,12 @@ export class FieldArray {
   [key: number]: Field
 
   length: number;
+  prettyPrint: string;
 
   constructor(fields: Field[]) {
     fields.forEach((value, index) => this[index] = value);
     this.length = fields.length;
+    this.prettyPrint = this.toString();
   }
 
   public static createFrom(fields: number[]): FieldArray {
@@ -186,6 +188,8 @@ export class FieldArray {
     };
   }
 
+  // first row empty
+  // no field with stone > 1
   public isInLoseCondition(): boolean {
     const result = Array.from(this)
       .slice(0, this.length / 2)
