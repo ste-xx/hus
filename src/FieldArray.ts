@@ -8,11 +8,12 @@ export interface AllowedToTake {
 
 
 function createAllowedToTake(): AllowedToTake {
-  return {
+  const self: AllowedToTake = {
     isAllowed: true,
-    map: <T>(f: (v: AllowedToTake) => T): T => f({isAllowed: true} as AllowedToTake),
+    map: <T>(f: (v: AllowedToTake) => T): T => f(self),
     combine: (f: () => AllowedToTake | NotAllowedToTake): AllowedToTake | NotAllowedToTake => f()
   };
+  return self;
 }
 
 export interface NotAllowedToTake {
@@ -23,13 +24,13 @@ export interface NotAllowedToTake {
 }
 
 function createNotAllowedBecause(reason: string): NotAllowedToTake {
-  const created: NotAllowedToTake = {
+  const self: NotAllowedToTake = {
     isAllowed: false,
     reason: `notAllowedBecause${reason}`,
-    combine: (): NotAllowedToTake => created,
-    map: <T>(f: (v: NotAllowedToTake) => T) => f(created)
+    combine: (): NotAllowedToTake => self,
+    map: <T>(f: (v: NotAllowedToTake) => T) => f(self)
   };
-  return created;
+  return self;
 }
 
 export interface PossibleToSteal {
@@ -39,12 +40,12 @@ export interface PossibleToSteal {
 }
 
 function createIsPossibleToSteal(): PossibleToSteal {
-  const created: PossibleToSteal = {
+  const self: PossibleToSteal = {
     isPossible: true,
-    map: <T>(f: (v: PossibleToSteal) => T) => f(created),
+    map: <T>(f: (v: PossibleToSteal) => T) => f(self),
     combine: (f: () => PossibleToSteal | NotPossibleToSteal): PossibleToSteal | NotPossibleToSteal => f()
   };
-  return created;
+  return self;
 }
 
 export interface NotPossibleToSteal {
@@ -61,13 +62,13 @@ function* arrGen<T>(length: number, fn: (index: number) => T): Generator<T> {
 }
 
 function createIsNotPossibleToStealBecause(reason: string): NotPossibleToSteal {
-  const created: NotPossibleToSteal = {
+  const self: NotPossibleToSteal = {
     isPossible: false,
-    combine: () => created,
-    map: <T>(f: (v: NotPossibleToSteal) => T) => f(created),
+    combine: () => self,
+    map: <T>(f: (v: NotPossibleToSteal) => T) => f(self),
     reason: `notPossibleBecause${reason}`
   };
-  return created;
+  return self;
 }
 
 export class FieldArray {
