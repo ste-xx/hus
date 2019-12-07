@@ -6,10 +6,11 @@ export interface AllowedToTake {
   combine: (f: () => AllowedToTake | NotAllowedToTake) => AllowedToTake | NotAllowedToTake;
 }
 
+
 function createAllowedToTake(): AllowedToTake {
   return {
     isAllowed: true,
-    map: <T>(f: (v: AllowedToTake) => T) => f({isAllowed: true} as AllowedToTake),
+    map: <T>(f: (v: AllowedToTake) => T): T => f({isAllowed: true} as AllowedToTake),
     combine: (f: () => AllowedToTake | NotAllowedToTake): AllowedToTake | NotAllowedToTake => f()
   };
 }
@@ -151,20 +152,20 @@ export class FieldArray {
   public take(index: number): { updated: FieldArray; lastSeatedIndex: number } {
     const steps = this[index].stones % this.length;
     const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number): Field => i === index ? f(v) : v;
-    const isNextField = (from: number) => (v: Field, i: number) => {
+    const isNextField = (from: number) => (v: Field, i: number): boolean => {
       const nextField = from === this.length - 1 ? 0 : from + 1;
       return i === nextField;
     };
-    const ifInStepRange = (f: (v: Field) => Field) => (v: Field, i: number) => {
+    const ifInStepRange = (f: (v: Field) => Field) => (v: Field, i: number): Field => {
       const steps = this[index].stones % this.length;
       const nextFns = [...arrGen(steps, (i) => isNextField((index + i) % this.length))];
       const isInRange = nextFns.reduce((acc, cur) => cur(v, i) || acc, false);
       return isInRange ? f(v) : v;
     };
 
-    const createZeroField = () => new Field(0);
-    const createFieldPlus = (stones: number) => (v: Field) => new Field(v.stones + stones);
-    const fullRoundTrips = () => Math.trunc(this[index].stones / this.length);
+    const createZeroField = (): Field => new Field(0);
+    const createFieldPlus = (stones: number) => (v: Field): Field => new Field(v.stones + stones);
+    const fullRoundTrips = (): number => Math.trunc(this[index].stones / this.length);
 
     return {
       updated: new FieldArray([...this]
@@ -197,11 +198,11 @@ export class FieldArray {
       };
     }
 
-    const ifSeatedField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === index ? f(v, i) : v;
-    const stealFrom = (other: FieldArray) => (v: Field, i: number) => new Field(v.stones + other[this.otherSideIndex(i)].stones);
+    const ifSeatedField = (f: (v: Field, i: number) => Field) => (v: Field, i: number): Field => i === index ? f(v, i) : v;
+    const stealFrom = (other: FieldArray) => (v: Field, i: number): Field => new Field(v.stones + other[this.otherSideIndex(i)].stones);
 
-    const ifStolenField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === (this.otherSideIndex(index)) ? f(v, i) : v;
-    const createZeroField = () => new Field(0);
+    const ifStolenField = (f: (v: Field, i: number) => Field) => (v: Field, i: number): Field => i === (this.otherSideIndex(index)) ? f(v, i) : v;
+    const createZeroField = (): Field => new Field(0);
 
     return {
       updated: new FieldArray([...this].map(ifSeatedField(stealFrom(other)))),
