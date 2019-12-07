@@ -40,11 +40,11 @@ export class BoardSide {
     return new BoardSide(boardSide.id, field, boardSide.iteration + 1, boardSide.eventDispatcher, boardSide.eventBus);
   }
 
-  private isThisBoard({boardSide}: EventPayload<PlayEvent>) {
+  private isThisBoard({boardSide}: EventPayload<PlayEvent>): boolean {
     return boardSide.id === this.id
   }
 
-  public getStoneCountFor(fieldIndex: number) {
+  public getStoneCountFor(fieldIndex: number): number {
     return this.field[fieldIndex].stones;
   }
 
@@ -54,7 +54,7 @@ export class BoardSide {
 
   public play(payload: EventPayload<PlayEvent>): EventPayload<PlayEvent> {
     const {player, fieldIndex, otherBoardSide} = payload;
-    const logWithPrefix = (msg: string) => this.log(`${player.name} ${msg}`);
+    const logWithPrefix = (msg: string): void => this.log(`${player.name} ${msg}`);
 
     logWithPrefix(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
     const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
@@ -84,11 +84,11 @@ export class BoardSide {
     return payload;
   }
 
-  private take(index: number, arr: FieldArray, otherArr: FieldArray, log: (msg: string) => void, first: boolean): { updated: FieldArray, otherUpdated: FieldArray } {
+  private take(index: number, arr: FieldArray, otherArr: FieldArray, log: (msg: string) => void, first: boolean): { updated: FieldArray; otherUpdated: FieldArray } {
     if (otherArr.isInLoseCondition() || arr.isInLoseCondition()) {
       return {updated: arr, otherUpdated: otherArr};
     }
-    const logIfNotFirst = (msg: string) => {
+    const logIfNotFirst = (msg: string): void => {
       if (!first) {
         log(msg);
       }
@@ -101,7 +101,7 @@ export class BoardSide {
       return {updated: arr, otherUpdated: otherArr};
     }
 
-    const printStones = (arr: FieldArray, index: number) => `${arr[index].stones} ${arr[index].stones === 1 ? 'stone' : 'stones'}`;
+    const printStones = (arr: FieldArray, index: number): string => `${arr[index].stones} ${arr[index].stones === 1 ? 'stone' : 'stones'}`;
     log(`${first ? 'take' : 'retake'} ${BoardSide.indexToName(index)} with ${printStones(arr, index)}`);
     const {updated: afterTake, lastSeatedIndex} = arr.take(index);
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
@@ -112,15 +112,15 @@ export class BoardSide {
     return this.take(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
   }
 
-  private shutdown() {
+  private shutdown(): void {
     this.eventBus.removeEventListener('play', this.playFn);
   }
 
-  private static indexToName(fieldIndex: number) {
+  private static indexToName(fieldIndex: number): string {
     return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16 - fieldIndex}`}`;
   }
 
-  private static notAllowedToTakeToLogMessage(error: NotAllowedToTake) {
+  private static notAllowedToTakeToLogMessage(error: NotAllowedToTake): string {
     switch (error.reason) {
       case "notAllowedBecauseNoStoneExists":
         return 'There are no stones';
@@ -133,7 +133,7 @@ export class BoardSide {
     }
   }
 
-  private static notPossibleToStealToLogMessage(error: NotPossibleToSteal) {
+  private static notPossibleToStealToLogMessage(error: NotPossibleToSteal): string {
     switch (error.reason) {
       case "notPossibleBecauseSecondRow":
         return 'It is in the second row';
@@ -165,7 +165,7 @@ class Board {
     });
   }
 
-  public getBoardSidesFor(player: Player): { own: BoardSide, other: BoardSide } {
+  public getBoardSidesFor(player: Player): { own: BoardSide; other: BoardSide } {
     return {
       own: player.name === this.player0.name ? this.side0 : this.side1,
       other: player.name === this.player0.name ? this.side1 : this.side0

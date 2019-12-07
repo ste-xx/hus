@@ -48,15 +48,14 @@ function createIsPossibleToSteal(): PossibleToSteal {
 
 export interface NotPossibleToSteal {
   isPossible: false;
-  reason: string,
+  reason: string;
   map: <T>(f: (v: NotPossibleToSteal) => T) => T;
-  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => NotPossibleToSteal
+  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => NotPossibleToSteal;
 }
 
 function* arrGen<T>(length: number, fn: (index: number) => T): Generator<T> {
-  let i = 0;
-  while (i < length) {
-    yield fn(i++);
+  for (let i = 0; i < length; i++) {
+    yield fn(i);
   }
 }
 
@@ -101,14 +100,9 @@ export class FieldArray {
   }
 
   * [Symbol.iterator](): Generator<Field> {
-    let i = 0;
-    while (i < this.length) {
-      yield this[i++];
+    for (let i = 0; i < this.length; i++) {
+      yield this[i];
     }
-  }
-
-  public toArray() {
-    return Array.from(this);
   }
 
   private topRow(): Field[] {
@@ -127,11 +121,11 @@ export class FieldArray {
     return [...this].slice(this.length / 2, this.length)
   }
 
-  private otherSideIndex(index: number):number {
+  private otherSideIndex(index: number): number {
     return Math.abs(this.length / 2 - index) - 1;
   }
 
-  public toString() {
+  public toString(): string {
     return [
       ...this.topRow()
         .map(({stones}, i) => `A${i + 1}:${stones}`),
@@ -154,9 +148,9 @@ export class FieldArray {
     return rules.reduce<AllowedToTake | NotAllowedToTake>((result, rule) => result.combine(rule), createAllowedToTake());
   }
 
-  public take(index: number): { updated: FieldArray, lastSeatedIndex: number } {
+  public take(index: number): { updated: FieldArray; lastSeatedIndex: number } {
     const steps = this[index].stones % this.length;
-    const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number) => i === index ? f(v) : v;
+    const ifTakenField = (f: (v: Field) => Field) => (v: Field, i: number): Field => i === index ? f(v) : v;
     const isNextField = (from: number) => (v: Field, i: number) => {
       const nextField = from === this.length - 1 ? 0 : from + 1;
       return i === nextField;
@@ -195,7 +189,7 @@ export class FieldArray {
     return rules.reduce<(PossibleToSteal | NotPossibleToSteal)>((result, rule) => result.combine(rule), createIsPossibleToSteal());
   }
 
-  public steal(index: number, other: FieldArray): { updated: FieldArray, otherAfterStolenFrom: FieldArray } {
+  public steal(index: number, other: FieldArray): { updated: FieldArray; otherAfterStolenFrom: FieldArray } {
     if (!this.isPossibleToSteal(index, other).isPossible) {
       return {
         updated: this,
@@ -215,6 +209,7 @@ export class FieldArray {
     };
   }
 
+  // todo:
   // first row empty
   // no field with stone > 1
   public isInLoseCondition(): boolean {

@@ -1,4 +1,4 @@
-import {FieldArray, NotAllowedToTake, NotPossibleToSteal} from '../src/FieldArray'
+import {FieldArray, NotAllowedToTake} from '../src/FieldArray'
 
 describe('FieldArray', () => {
   describe('isAllowedToTake', () => {
