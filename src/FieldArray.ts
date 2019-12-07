@@ -211,13 +211,9 @@ export class FieldArray {
     };
   }
 
-  // todo:
-  // first row empty
-  // no field with stone > 1
   public isInLoseCondition(): boolean {
-    const result = Array.from(this)
-      .slice(0, this.length / 2)
-      .reduce((acc, {stones}) => acc && stones < 2, true);
-    return result;
+    const topRowIsFilled = this.topRow().reduce((acc, cur): boolean => acc || cur.isNotEmpty(), false);
+    const moreThan1Stone = [...this].reduce((acc, cur): boolean => acc || cur.stones > 1, false);
+    return !topRowIsFilled || !moreThan1Stone;
   }
 }
