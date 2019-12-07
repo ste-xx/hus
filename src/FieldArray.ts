@@ -53,6 +53,13 @@ export interface NotPossibleToSteal {
   combine: (f: () => PossibleToSteal | NotPossibleToSteal) => NotPossibleToSteal
 }
 
+function* arrGen<T>(length: number, fn: (index: number) => T): Generator<T> {
+  let i = 0;
+  while (i < length) {
+    yield fn(i++);
+  }
+}
+
 function createIsNotPossibleToStealBecause(reason: string): NotPossibleToSteal {
   const created: NotPossibleToSteal = {
     isPossible: false,
@@ -86,16 +93,17 @@ export class FieldArray {
   }
 
   public static createNewInitialized(): FieldArray {
-    return FieldArray.createFrom(Array.from({length: 16}, (v, i) => i > 3 && i < 8 ? 0 : 2));
+    return FieldArray.createFrom([...arrGen(16, (i) => i > 3 && i < 8 ? 0 : 2)]);
   }
 
   public static createFullFrom({length}: { length: number }): FieldArray {
-    return FieldArray.createFrom(Array.from({length}, (v, i) => 2));
+    return FieldArray.createFrom([...arrGen(length, () => 2)]);
   }
 
-  * [Symbol.iterator]() {
-    for (let i = 0; i < this.length; i++) {
-      yield this[i];
+  * [Symbol.iterator](): Generator<Field> {
+    let i = 0;
+    while (i < this.length) {
+      yield this[i++];
     }
   }
 
@@ -103,11 +111,33 @@ export class FieldArray {
     return Array.from(this);
   }
 
+  private topRow(): Field[] {
+    return [...this].slice(0, this.length / 2)
+  }
+
+  private isTopRow(index: number): boolean {
+    return index < this.length / 2
+  }
+
+  private isBottomRow(index: number): boolean {
+    return !this.isTopRow(index);
+  }
+
+  private bottomRow(): Field[] {
+    return [...this].slice(this.length / 2, this.length)
+  }
+
+  private otherSideIndex(index: number):number {
+    return Math.abs(this.length / 2 - index) - 1;
+  }
+
   public toString() {
-    const arr = this.toArray();
     return [
-      ...arr.slice(0, this.length / 2).map(({stones}, i) => `A${i + 1}:${stones}`),
-      ...arr.slice(this.length / 2, this.length).reverse().map(({stones}, i) => `B${i + 1}:${stones}`)
+      ...this.topRow()
+        .map(({stones}, i) => `A${i + 1}:${stones}`),
+      ...this.bottomRow()
+        .reverse()
+        .map(({stones}, i) => `B${i + 1}:${stones}`)
     ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
   }
 
@@ -116,12 +146,12 @@ export class FieldArray {
     const existsStone = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecause('NoStoneExists');
     const enoughStones = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 1 ? createAllowedToTake() : createNotAllowedBecause('NotEnoughStones');
     // if one rule returns false -> not allowed
-    const rules: Array<() => (AllowedToTake | NotAllowedToTake)> = [
+    const rules = [
       inIndexRange,
       existsStone,
       enoughStones
     ];
-    return rules.reduce((result, rule) => result.combine(rule), createAllowedToTake() as (AllowedToTake | NotAllowedToTake));
+    return rules.reduce<AllowedToTake | NotAllowedToTake>((result, rule) => result.combine(rule), createAllowedToTake());
   }
 
   public take(index: number): { updated: FieldArray, lastSeatedIndex: number } {
@@ -133,7 +163,7 @@ export class FieldArray {
     };
     const ifInStepRange = (f: (v: Field) => Field) => (v: Field, i: number) => {
       const steps = this[index].stones % this.length;
-      const nextFns = Array.from({length: steps}, (v, i) => isNextField((index + i) % this.length));
+      const nextFns = [...arrGen(steps, (i) => isNextField((index + i) % this.length))];
       const isInRange = nextFns.reduce((acc, cur) => cur(v, i) || acc, false);
       return isInRange ? f(v) : v;
     };
@@ -143,7 +173,7 @@ export class FieldArray {
     const fullRoundTrips = () => Math.trunc(this[index].stones / this.length);
 
     return {
-      updated: new FieldArray(this.toArray()
+      updated: new FieldArray([...this]
         .map(ifTakenField(createZeroField))
         .map(createFieldPlus(fullRoundTrips()))
         .map(ifInStepRange(createFieldPlus(1)))
@@ -153,16 +183,16 @@ export class FieldArray {
   }
 
   public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal | NotPossibleToSteal) {
-    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => index < this.length / 2 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
+    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => this.isTopRow(index) ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
     const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
-    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[(Math.abs(this.length / 2 - index) - 1)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
+    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[this.otherSideIndex(index)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
     // if one rule returns false -> not possible
-    const rules: Array<() => (PossibleToSteal | NotPossibleToSteal)> = [
+    const rules = [
       inCorrectRow,
       enoughStones,
       otherSideHasStones
     ];
-    return rules.reduce((result, rule) => result.combine(rule), createIsPossibleToSteal() as (PossibleToSteal | NotPossibleToSteal));
+    return rules.reduce<(PossibleToSteal | NotPossibleToSteal)>((result, rule) => result.combine(rule), createIsPossibleToSteal());
   }
 
   public steal(index: number, other: FieldArray): { updated: FieldArray, otherAfterStolenFrom: FieldArray } {
@@ -174,17 +204,14 @@ export class FieldArray {
     }
 
     const ifSeatedField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === index ? f(v, i) : v;
-    const stealFrom = (other: FieldArray) => (v: Field, i: number) => new Field(v.stones + other[(Math.abs(this.length / 2 - i) - 1)].stones);
+    const stealFrom = (other: FieldArray) => (v: Field, i: number) => new Field(v.stones + other[this.otherSideIndex(i)].stones);
 
-    const ifStolenField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === (Math.abs(this.length / 2 - index) - 1) ? f(v, i) : v;
+    const ifStolenField = (f: (v: Field, i: number) => Field) => (v: Field, i: number) => i === (this.otherSideIndex(index)) ? f(v, i) : v;
     const createZeroField = () => new Field(0);
 
     return {
-      updated: new FieldArray(this.toArray()
-        .map(ifSeatedField(stealFrom(other)))
-      ),
-      otherAfterStolenFrom: new FieldArray(other.toArray()
-        .map(ifStolenField(createZeroField)))
+      updated: new FieldArray([...this].map(ifSeatedField(stealFrom(other)))),
+      otherAfterStolenFrom: new FieldArray([...other].map(ifStolenField(createZeroField)))
     };
   }
 
