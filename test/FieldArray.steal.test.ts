@@ -1,4 +1,4 @@
-import {FieldArray, NotPossibleToSteal} from '../src/FieldArray'
+import {FieldArray} from '../src/FieldArray'
 
 describe('FieldArray', () => {
   describe('isPossibleToSteal', () => {
@@ -25,12 +25,12 @@ describe('FieldArray', () => {
        ${'notPossibleBecauseSecondRow'}            | ${FieldArray.createFrom([2, 0, 0, 0, 2, 0])} | ${4}  | ${FieldArray.createFullFrom(FieldArray.createNewInitialized())}
        ${'notPossibleBecauseNotEnoughStones'}      | ${FieldArray.createFrom([0, 1, 0, 0, 0, 0])} | ${1}  | ${FieldArray.createFullFrom(FieldArray.createNewInitialized())}
        ${'notPossibleBecauseOtherSideHasNoStones'} | ${FieldArray.createFrom([2, 0, 0, 0, 0, 0])} | ${0}  | ${FieldArray.createFrom([2, 2, 0, 2, 2, 2])}
-      `('$note arr: $arr index: $index ', async ({reason, arr, index, other}) => {
+      `('not possible to steal with fieldArray: $arr.prettyPrint $index $other.prettyPrint $reason', async ({reason, arr, index, other}) => {
       // @formatter:on
       const result = (arr as FieldArray).isPossibleToSteal(index as number, other as FieldArray);
       expect(result.isPossible).toBe(false);
-      expect((result as NotPossibleToSteal).reason).toBe(reason);
-    });
+      expect(result.reason).toBe(reason);
+      });
     /* eslint-enable indent,@typescript-eslint/indent */
   });
 

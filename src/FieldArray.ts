@@ -1,74 +1,68 @@
 import {Field} from "./Field";
 
-export interface AllowedToTake {
-  isAllowed: true;
+export interface AllowedToTake<T extends boolean> {
+  isAllowed: T;
   map: <T>(f: (v: this) => T) => T;
-  combine: (f: () => AllowedToTake | NotAllowedToTake) => AllowedToTake | NotAllowedToTake;
+  combine: (f: () => AllowedToTake<boolean>) => AllowedToTake<boolean>;
+  reason: string;
 }
 
 
-function createAllowedToTake(): AllowedToTake {
-  const self: AllowedToTake = {
+function createAllowedToTake(): AllowedToTake<true> {
+  const self: AllowedToTake<true> = {
     isAllowed: true,
-    map: <T>(f: (v: AllowedToTake) => T): T => f(self),
-    combine: (f: () => AllowedToTake | NotAllowedToTake): AllowedToTake | NotAllowedToTake => f()
+    map: <T>(f: (v: AllowedToTake<true>) => T): T => f(self),
+    combine: (f: () => AllowedToTake<boolean>): AllowedToTake<boolean> => f(),
+    reason: ''
   };
   return self;
 }
 
-export interface NotAllowedToTake {
-  isAllowed: false;
-  reason: string;
-  map: <T>(f: (v: NotAllowedToTake) => T) => T;
-  combine: (f: () => AllowedToTake | NotAllowedToTake) => NotAllowedToTake;
-}
-
-function createNotAllowedBecause(reason: string): NotAllowedToTake {
-  const self: NotAllowedToTake = {
+function createNotAllowedBecause(reason: string): AllowedToTake<false> {
+  const self: AllowedToTake<false> = {
     isAllowed: false,
-    reason: `notAllowedBecause${reason}`,
-    combine: (): NotAllowedToTake => self,
-    map: <T>(f: (v: NotAllowedToTake) => T) => f(self)
+    map: <T>(f: (v: AllowedToTake<false>) => T) => f(self),
+    combine: (): AllowedToTake<false> => self,
+    reason: `notAllowedBecause${reason}`
   };
   return self;
 }
 
-export interface PossibleToSteal {
-  isPossible: true;
-  map: <T>(f: (v: PossibleToSteal) => T) => T;
-  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => PossibleToSteal | NotPossibleToSteal;
-}
-
-function createIsPossibleToSteal(): PossibleToSteal {
-  const self: PossibleToSteal = {
-    isPossible: true,
-    map: <T>(f: (v: PossibleToSteal) => T) => f(self),
-    combine: (f: () => PossibleToSteal | NotPossibleToSteal): PossibleToSteal | NotPossibleToSteal => f()
-  };
-  return self;
-}
-
-export interface NotPossibleToSteal {
-  isPossible: false;
+interface PossibleToSteal<T extends boolean> {
+  isPossible: T;
+  map: <U>(f: (v: this) => U) => U;
+  combine: (f: () => PossibleToSteal<boolean>) => PossibleToSteal<boolean>;
   reason: string;
-  map: <T>(f: (v: NotPossibleToSteal) => T) => T;
-  combine: (f: () => PossibleToSteal | NotPossibleToSteal) => NotPossibleToSteal;
 }
+
+function createIsPossibleToSteal(): PossibleToSteal<true> {
+  const self: PossibleToSteal<true> = {
+    isPossible: true,
+    map: <T>(f: (v: PossibleToSteal<true>) => T) => f(self),
+    combine: (f: () => PossibleToSteal<boolean>): PossibleToSteal<boolean> => f(),
+    reason: ''
+  };
+  return self;
+}
+
+function createIsNotPossibleToStealBecause(reason: string): PossibleToSteal<false> {
+  const self: PossibleToSteal<false> = {
+    isPossible: false,
+    map: <T>(f: (v: PossibleToSteal<false>) => T) => f(self),
+    combine: (): PossibleToSteal<false> => self,
+    reason: `notPossibleBecause${reason}`
+  };
+  return self;
+}
+
+export const whenOtherwise = <T>(predicate: () => boolean, trueFn: () => T, falseFn: () => T): () => T => {
+  return (): T => predicate() ? trueFn() : falseFn();
+};
 
 function* arrGen<T>(length: number, fn: (index: number) => T): Generator<T> {
   for (let i = 0; i < length; i++) {
     yield fn(i);
   }
-}
-
-function createIsNotPossibleToStealBecause(reason: string): NotPossibleToSteal {
-  const self: NotPossibleToSteal = {
-    isPossible: false,
-    combine: () => self,
-    map: <T>(f: (v: NotPossibleToSteal) => T) => f(self),
-    reason: `notPossibleBecause${reason}`
-  };
-  return self;
 }
 
 export class FieldArray {
@@ -137,17 +131,17 @@ export class FieldArray {
     ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
   }
 
-  public isAllowedToTake(index: number): (AllowedToTake | NotAllowedToTake) {
-    const inIndexRange = (): (AllowedToTake | NotAllowedToTake) => index >= 0 && index < this.length ? createAllowedToTake() : createNotAllowedBecause('IndexOutOfBound');
-    const existsStone = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 0 ? createAllowedToTake() : createNotAllowedBecause('NoStoneExists');
-    const enoughStones = (): (AllowedToTake | NotAllowedToTake) => this[index].stones > 1 ? createAllowedToTake() : createNotAllowedBecause('NotEnoughStones');
+  public isAllowedToTake(index: number): (AllowedToTake<boolean>) {
+    const inIndexRange = whenOtherwise<AllowedToTake<boolean>>(() => index >= 0 && index < this.length, createAllowedToTake, () => createNotAllowedBecause('IndexOutOfBound'));
+    const existsStone = whenOtherwise<AllowedToTake<boolean>>(() => this[index].stones > 0, createAllowedToTake, () => createNotAllowedBecause('NoStoneExists'));
+    const enoughStones = whenOtherwise<AllowedToTake<boolean>>(() => this[index].stones > 1, createAllowedToTake, () => createNotAllowedBecause('NotEnoughStones'));
     // if one rule returns false -> not allowed
     const rules = [
       inIndexRange,
       existsStone,
       enoughStones
     ];
-    return rules.reduce<AllowedToTake | NotAllowedToTake>((result, rule) => result.combine(rule), createAllowedToTake());
+    return rules.reduce<AllowedToTake<boolean>>((result, rule) => result.combine(rule), createAllowedToTake());
   }
 
   public take(index: number): { updated: FieldArray; lastSeatedIndex: number } {
@@ -178,17 +172,18 @@ export class FieldArray {
     }
   }
 
-  public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal | NotPossibleToSteal) {
-    const inCorrectRow = (): (PossibleToSteal | NotPossibleToSteal) => this.isTopRow(index) ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('SecondRow');
-    const enoughStones = (): (PossibleToSteal | NotPossibleToSteal) => this[index].stones > 1 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('NotEnoughStones');
-    const otherSideHasStones = (): (PossibleToSteal | NotPossibleToSteal) => other[this.otherSideIndex(index)].stones > 0 ? createIsPossibleToSteal() : createIsNotPossibleToStealBecause('OtherSideHasNoStones');
+  public isPossibleToSteal(index: number, other: FieldArray): (PossibleToSteal<boolean>) {
+    const inCorrectRow = whenOtherwise<PossibleToSteal<boolean>>(() => this.isTopRow(index), createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('SecondRow'));
+    const enoughStones = whenOtherwise<PossibleToSteal<boolean>>(() => this[index].stones > 1, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('NotEnoughStones'));
+    const otherSideHasStones = whenOtherwise<PossibleToSteal<boolean>>(() => other[this.otherSideIndex(index)].stones > 0, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('OtherSideHasNoStones'));
+
     // if one rule returns false -> not possible
     const rules = [
       inCorrectRow,
       enoughStones,
       otherSideHasStones
     ];
-    return rules.reduce<(PossibleToSteal | NotPossibleToSteal)>((result, rule) => result.combine(rule), createIsPossibleToSteal());
+    return rules.reduce<(PossibleToSteal<boolean>)>((result, rule) => result.combine(rule), createIsPossibleToSteal());
   }
 
   public steal(index: number, other: FieldArray): { updated: FieldArray; otherAfterStolenFrom: FieldArray } {
