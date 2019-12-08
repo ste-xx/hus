@@ -55,6 +55,35 @@ function createIsNotPossibleToStealBecause(reason: string): PossibleToSteal<fals
   return self;
 }
 
+export interface LooseCondition<T extends boolean> {
+  isLoosed: T;
+  map: <T>(f: (v: this) => T) => T;
+  combine: (f: () => LooseCondition<boolean>) => LooseCondition<boolean>;
+  reason: string;
+}
+
+
+function createIsLoosedCondition(reason: string): LooseCondition<true> {
+  const self: LooseCondition<true> = {
+    isLoosed: true,
+    map: <T>(f: (v: LooseCondition<true>) => T): T => f(self),
+    combine: (): LooseCondition<boolean> => self,
+    reason: ''
+  };
+  return self;
+}
+
+function createNotLoosedCondition(): LooseCondition<false> {
+  const self: LooseCondition<false> = {
+    isLoosed: false,
+    map: <T>(f: (v: LooseCondition<false>) => T) => f(self),
+    combine: (f: () => LooseCondition<boolean>): LooseCondition<boolean> => f(),
+    reason: ''
+  };
+  return self;
+}
+
+
 export const whenOtherwise = <T>(predicate: () => boolean, trueFn: () => T, falseFn: () => T): () => T => {
   return (): T => predicate() ? trueFn() : falseFn();
 };
@@ -206,9 +235,21 @@ export class FieldArray {
     };
   }
 
-  public isInLoseCondition(): boolean {
-    const topRowIsFilled = this.topRow().reduce((acc, cur): boolean => acc || cur.isNotEmpty(), false);
-    const moreThan1Stone = [...this].reduce((acc, cur): boolean => acc || cur.stones > 1, false);
-    return !topRowIsFilled || !moreThan1Stone;
+  public isInLoseCondition(): LooseCondition<boolean> {
+    const topRowIsEmpty = whenOtherwise<LooseCondition<boolean>>(
+      () => !this.topRow().reduce((acc, cur): boolean => acc || cur.isNotEmpty(), false),
+      () => createIsLoosedCondition('toprow empty'),
+      createNotLoosedCondition);
+    const noMoreThan1StoneEverywhere = whenOtherwise<LooseCondition<boolean>>(
+      () => ![...this].reduce((acc, cur): boolean => acc || cur.stones > 1, false),
+      () => createIsLoosedCondition('no more than 1 stone everywhere'),
+      createNotLoosedCondition);
+
+    const rules = [
+      topRowIsEmpty,
+      noMoreThan1StoneEverywhere
+    ];
+
+    return rules.reduce<(LooseCondition<boolean>)>((result, rule) => result.combine(rule), createNotLoosedCondition());
   }
 }

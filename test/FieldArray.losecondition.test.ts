@@ -13,6 +13,6 @@ describe('fieldArray', () => {
      ${'!lose'}                   | ${FieldArray.createFrom([1, 1, 2, 2])}   | ${false}
     `('$note arr: $arr.prettyPrint expected: $expected', async ({arr, expected}) => {
     // @formatter:on
-    expect(arr.isInLoseCondition()).toBe(expected);
+    expect(arr.isInLoseCondition().isLoosed).toBe(expected);
   });
 });
