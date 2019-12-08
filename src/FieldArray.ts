@@ -1,12 +1,15 @@
 import {Field} from "./Field";
 
-export interface AllowedToTake<T extends boolean> {
+export type AllowedToTake<T extends boolean> = {
   isAllowed: T;
-  map: <T>(f: (v: this) => T) => T;
+  map: <U>(f: (v: AllowedToTake<T>) => U) => U;
   combine: (f: () => AllowedToTake<boolean>) => AllowedToTake<boolean>;
   reason: string;
-}
+};
 
+export const isNotAllowedToTake = (v: AllowedToTake<boolean>): v is AllowedToTake<false> =>{
+  return !v.isAllowed;
+}
 
 function createAllowedToTake(): AllowedToTake<true> {
   const self: AllowedToTake<true> = {
@@ -28,7 +31,7 @@ function createNotAllowedBecause(reason: string): AllowedToTake<false> {
   return self;
 }
 
-interface PossibleToSteal<T extends boolean> {
+export interface PossibleToSteal<T extends boolean> {
   isPossible: T;
   map: <U>(f: (v: this) => U) => U;
   combine: (f: () => PossibleToSteal<boolean>) => PossibleToSteal<boolean>;
@@ -44,6 +47,10 @@ function createIsPossibleToSteal(): PossibleToSteal<true> {
   };
   return self;
 }
+
+export const isNotPossibleToSteal = (v: PossibleToSteal<boolean>): v is PossibleToSteal<false> =>{
+  return !v.isPossible;
+};
 
 function createIsNotPossibleToStealBecause(reason: string): PossibleToSteal<false> {
   const self: PossibleToSteal<false> = {

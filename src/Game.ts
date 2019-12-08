@@ -11,7 +11,7 @@ import {
   TurnEvent
 } from "./events";
 import {uuidv4, when} from "./fn";
-import {FieldArray, NotAllowedToTake, NotPossibleToSteal} from "./FieldArray";
+import {AllowedToTake, FieldArray, isNotAllowedToTake, isNotPossibleToSteal, PossibleToSteal} from "./FieldArray";
 
 export class BoardSide {
   readonly field: FieldArray;
@@ -58,7 +58,7 @@ export class BoardSide {
 
     logWithPrefix(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
     const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
-    if (!isAllowedToTakeResult.isAllowed) {
+    if (isNotAllowedToTake(isAllowedToTakeResult)) {
       this.eventDispatcher<PlayErrorEvent>('playError', {reason: isAllowedToTakeResult.reason});
       logWithPrefix(`take ${BoardSide.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
       return payload;
@@ -71,10 +71,10 @@ export class BoardSide {
       otherBoardSide: BoardSide.createNewVersionFrom(otherBoardSide, otherUpdated)
     };
 
-    if (otherUpdated.isInLoseCondition()) {
+    if (otherUpdated.isInLoseCondition().isLoosed) {
       logWithPrefix(`wins`);
       this.eventDispatcher<FinishGameWinEvent>('finishGameWin', eventPayload)
-    } else if (updated.isInLoseCondition()) {
+    } else if (updated.isInLoseCondition().isLoosed) {
       logWithPrefix(`lose`);
       this.eventDispatcher<FinishGameLoseEvent>('finishGameLose', eventPayload);
     } else {
@@ -85,7 +85,7 @@ export class BoardSide {
   }
 
   private take(index: number, arr: FieldArray, otherArr: FieldArray, log: (msg: string) => void, first: boolean): { updated: FieldArray; otherUpdated: FieldArray } {
-    if (otherArr.isInLoseCondition() || arr.isInLoseCondition()) {
+    if (otherArr.isInLoseCondition().isLoosed || arr.isInLoseCondition().isLoosed) {
       return {updated: arr, otherUpdated: otherArr};
     }
     const logIfNotFirst = (msg: string): void => {
@@ -106,7 +106,7 @@ export class BoardSide {
     const {updated: afterTake, lastSeatedIndex} = arr.take(index);
     log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
     const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherArr);
-    log(`${isPossibleToStealResult.isPossible ? `steals on position ${BoardSide.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}` : `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}`}`);
+    log(`${(isNotPossibleToSteal(isPossibleToStealResult) ? `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}` : `steals on position ${BoardSide.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}`)}`);
     const {updated: afterSteal, otherAfterStolenFrom} = afterTake.steal(lastSeatedIndex, otherArr);
     log(`new stone count on position ${BoardSide.indexToName(lastSeatedIndex)}: ${printStones(afterSteal, lastSeatedIndex)}`);
     return this.take(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
@@ -120,7 +120,7 @@ export class BoardSide {
     return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16 - fieldIndex}`}`;
   }
 
-  private static notAllowedToTakeToLogMessage(error: NotAllowedToTake): string {
+  private static notAllowedToTakeToLogMessage(error: AllowedToTake<false>): string {
     switch (error.reason) {
       case "notAllowedBecauseNoStoneExists":
         return 'There are no stones';
@@ -133,7 +133,7 @@ export class BoardSide {
     }
   }
 
-  private static notPossibleToStealToLogMessage(error: NotPossibleToSteal): string {
+  private static notPossibleToStealToLogMessage(error: PossibleToSteal<false>): string {
     switch (error.reason) {
       case "notPossibleBecauseSecondRow":
         return 'It is in the second row';
