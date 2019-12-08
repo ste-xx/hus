@@ -1,24 +1,25 @@
 import {BoardSide, Player} from "./Game";
 
 export type Events = string;
-//todo turn AND endturn necessary?
-export type TurnEvent = 'turn';
+export type StartGameEvent = 'startGame';
 export type EndTurnEvent = 'endTurn';
 export type PlayEvent = 'play';
 export type PlayErrorEvent = 'playError';
 export type FinishGameWinEvent = 'finishGameWin';
 export type FinishGameLoseEvent = 'finishGameLose';
 export type LogEvent = 'log';
+export type ResetEvent = 'reset';
 
 //@formatter:off
 export type EventPayload<E> =
-  E extends TurnEvent ? { player: Player } :
+  E extends StartGameEvent  ? { player: Player; boardSide: BoardSide; otherBoardSide: BoardSide } :
   E extends EndTurnEvent ? { player: Player; boardSide: BoardSide; otherBoardSide: BoardSide } :
   E extends PlayEvent ? { player: Player; boardSide: BoardSide; otherBoardSide: BoardSide; fieldIndex: number } :
   E extends PlayErrorEvent ? {reason: string} :
   E extends FinishGameWinEvent ? {player: Player; boardSide: BoardSide; otherBoardSide: BoardSide} :
   E extends FinishGameLoseEvent ? {player: Player; boardSide: BoardSide; otherBoardSide: BoardSide} :
   E extends LogEvent ? {msg: string} :
+  E extends ResetEvent ? {} :
   unknown;
 //formatter:on
 

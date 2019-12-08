@@ -182,12 +182,15 @@
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game.board.side0, game.board.side1);
+  const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
+  game.go();
 
   document.querySelector('#reset').addEventListener('click', () => {
     game.reset();
     render(game.board.side0, game.board.side1);
     [...document.querySelectorAll('.player0')].forEach((field) => field.disabled = false);
     [...document.querySelectorAll('.player1')].forEach((field) => field.disabled = true);
+    game.go();
   });
   eventBus.addEventListener('endTurn', ({player, boardSide, otherBoardSide}) => {
     if (game.player0.name === player.name) {

@@ -7,8 +7,7 @@ import {
   FinishGameWinEvent,
   LogEvent,
   PlayErrorEvent,
-  PlayEvent,
-  TurnEvent
+  PlayEvent, ResetEvent, StartGameEvent,
 } from "./events";
 import {uuidv4, when} from "./fn";
 import {AllowedToTake, FieldArray, isNotAllowedToTake, isNotPossibleToSteal, PossibleToSteal} from "./FieldArray";
@@ -191,16 +190,23 @@ export class Game {
   constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.player0 = new Player('Player 1');
     this.player1 = new Player('Player 2');
-
     this.board = new Board(this.player0, this.player1, eventDispatcher, eventBus);
 
     this.eventDispatcher = eventDispatcher;
     this.eventBus = eventBus;
-    this.eventDispatcher<TurnEvent>('turn', {player: this.player0});
+  }
+
+  public go() {
+    this.eventDispatcher<StartGameEvent>('startGame', {
+      player: this.player0,
+      boardSide: this.board.side0,
+      otherBoardSide: this.board.side1
+    });
     this.eventDispatcher<LogEvent>('log', {msg: `${this.player0.name} turn.`});
   }
 
   public reset() {
+    this.eventDispatcher<ResetEvent>('reset', {});
     this.eventDispatcher<LogEvent>('log', {msg: `****RESET***`});
     this.board = new Board(this.player0, this.player1, this.eventDispatcher, this.eventBus);
   }
