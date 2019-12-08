@@ -137,15 +137,18 @@
   const setupUi = (game) => {
     const setupFor = (player) => ({
       with: (fields) => {
-        const delegate = ({field, fieldIndex}) => field.addEventListener('click', () => {
-          const {own: boardSide, other: otherBoardSide} = game.board.getBoardSidesFor(player);
-          return eventDispatcher('play', {
-            boardSide,
-            otherBoardSide,
-            player,
-            fieldIndex
+        const delegate = ({field, fieldIndex}) => {
+          field.fieldIndex = fieldIndex;
+          return field.addEventListener('click', () => {
+            const {own: boardSide, other: otherBoardSide} = game.board.getBoardSidesFor(player);
+            return eventDispatcher('play', {
+              boardSide,
+              otherBoardSide,
+              player,
+              fieldIndex
+            });
           });
-        });
+        };
 
         fields.slice(0, 8)
           .map((field, fieldIndex) => ({field, fieldIndex}))
@@ -192,6 +195,24 @@
     [...document.querySelectorAll('.player1')].forEach((field) => field.disabled = true);
     game.go();
   });
+
+  eventBus.addEventListener('finishGameWin', ({player}) => alert(`${player.name} wins`));
+  eventBus.addEventListener('finishGameLose', ({player}) => alert(`${player.name} lose`));
+
+
+  eventBus.addEventListener('play', ({player, fieldIndex}) => {
+    const p = game.player0.name === player.name ? '.player0' : '.player1';
+    [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex).style['border-color'] = getRandomColor();
+  });
+
+  function getRandomColor() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
   eventBus.addEventListener('endTurn', ({player, boardSide, otherBoardSide}) => {
     if (game.player0.name === player.name) {
       render(boardSide, otherBoardSide);

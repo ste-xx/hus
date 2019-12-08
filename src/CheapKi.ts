@@ -18,15 +18,18 @@ export class CheapKi {
 
   private startFn({player, boardSide, otherBoardSide}: { player: Player; boardSide: BoardSide; otherBoardSide: BoardSide }) {
     if (this.player.name === player.name) {
-      this.do(boardSide, otherBoardSide);
+      setTimeout(()=> {
+        this.do(boardSide, otherBoardSide);
+      },100);
     }
   }
 
 
   private endTurn({player, boardSide, otherBoardSide}: { player: Player; boardSide: BoardSide; otherBoardSide: BoardSide }) {
     if (this.player.name !== player.name) {
-      // switch because this is the end event from the other player
-      this.do(otherBoardSide, boardSide);
+      setTimeout(()=> {
+        this.do(otherBoardSide, boardSide);
+      },100);
     }
   }
 
@@ -38,7 +41,6 @@ export class CheapKi {
   }
 
   private do(boardSide: BoardSide, otherBoardSide: BoardSide) {
-    setTimeout(()=> {
       const result = [...boardSide.field].reduce((acc, cur, i) =>
         acc.stones < cur.stones ? {i, stones: cur.stones} : acc, {i: 0, stones: 0})
       this.eventDispatcher('play', {
@@ -47,7 +49,6 @@ export class CheapKi {
         player: this.player,
         fieldIndex: result.i
       });
-    },100);
     // console.warn(boardSide.field.prettyPrint);
   }
 
