@@ -186,6 +186,7 @@ export class Game {
   public player1: Player;
   public board: Board;
   public eventDispatcher: EventDispatcher;
+  private eventBus: EventBus;
 
   constructor(eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.player0 = new Player('Player 1');
@@ -194,8 +195,14 @@ export class Game {
     this.board = new Board(this.player0, this.player1, eventDispatcher, eventBus);
 
     this.eventDispatcher = eventDispatcher;
+    this.eventBus = eventBus;
     this.eventDispatcher<TurnEvent>('turn', {player: this.player0});
     this.eventDispatcher<LogEvent>('log', {msg: `${this.player0.name} turn.`});
+  }
+
+  public reset() {
+    this.eventDispatcher<LogEvent>('log', {msg: `****RESET***`});
+    this.board = new Board(this.player0, this.player1, this.eventDispatcher, this.eventBus);
   }
 }
 
