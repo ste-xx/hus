@@ -7,9 +7,9 @@ export type AllowedToTake<T extends boolean> = {
   reason: string;
 };
 
-export const isNotAllowedToTake = (v: AllowedToTake<boolean>): v is AllowedToTake<false> =>{
+export const isNotAllowedToTake = (v: AllowedToTake<boolean>): v is AllowedToTake<false> => {
   return !v.isAllowed;
-}
+};
 
 function createAllowedToTake(): AllowedToTake<true> {
   const self: AllowedToTake<true> = {
@@ -48,7 +48,7 @@ function createIsPossibleToSteal(): PossibleToSteal<true> {
   return self;
 }
 
-export const isNotPossibleToSteal = (v: PossibleToSteal<boolean>): v is PossibleToSteal<false> =>{
+export const isNotPossibleToSteal = (v: PossibleToSteal<boolean>): v is PossibleToSteal<false> => {
   return !v.isPossible;
 };
 

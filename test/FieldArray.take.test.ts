@@ -1,4 +1,4 @@
-import {FieldArray, NotAllowedToTake} from '../src/FieldArray'
+import {FieldArray, AllowedToTake} from '../src/FieldArray'
 
 describe('FieldArray', () => {
   describe('isAllowedToTake', () => {
@@ -27,7 +27,7 @@ describe('FieldArray', () => {
       // @formatter:on
       const result = (arr as FieldArray).isAllowedToTake(index as number);
       expect(result.isAllowed).toBe(false);
-      expect((result as NotAllowedToTake).reason).toBe(reason);
+      expect((result as AllowedToTake<false>).reason).toBe(reason);
     });
   });
 
