@@ -16,6 +16,7 @@
             display: flex;
             height: 100%;
             flex-direction: column;
+            overflow-y: hidden;
         }
 
     </style>
@@ -46,16 +47,16 @@
 <div class="side">
 
     <div></div>
-    <div class="index">8</div>
-    <div class="index">7</div>
-    <div class="index">6</div>
-    <div class="index">5</div>
-    <div class="index">4</div>
-    <div class="index">3</div>
-    <div class="index">2</div>
     <div class="index">1</div>
+    <div class="index">2</div>
+    <div class="index">3</div>
+    <div class="index">4</div>
+    <div class="index">5</div>
+    <div class="index">6</div>
+    <div class="index">7</div>
+    <div class="index">8</div>
 
-    <div> B</div>
+    <div> D</div>
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
@@ -65,7 +66,7 @@
     <input type="button" class="player1">
     <input type="button" class="player1">
 
-    <div> A</div>
+    <div> C</div>
     <input type="button" class="player1">
     <input type="button" class="player1">
     <input type="button" class="player1">
@@ -78,7 +79,7 @@
 
 <h2> Player 1</h2>
 <div class="side">
-    <div> A</div>
+    <div> B</div>
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
@@ -88,7 +89,7 @@
     <input type="button" class="player0">
     <input type="button" class="player0">
 
-    <div> B</div>
+    <div> A</div>
     <input type="button" class="player0">
     <input type="button" class="player0">
     <input type="button" class="player0">
@@ -185,7 +186,7 @@
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game.board.side0, game.board.side1);
-  const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
+  // const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
   game.go();
 
   document.querySelector('#reset').addEventListener('click', () => {

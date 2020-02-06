@@ -19,9 +19,11 @@ export class BoardSide {
   private readonly eventBus: EventBus;
   private readonly playFn: (x: EventPayload<PlayEvent>) => EventPayload<PlayEvent>;
   private readonly iteration: number;
+  private readonly isBottom: boolean;
 
-  private constructor(id: string, field: FieldArray, iteration: number, eventDispatcher: EventDispatcher, eventBus: EventBus) {
+  private constructor(id: string, field: FieldArray, isBottom: boolean, iteration: number, eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.field = field;
+    this.isBottom = isBottom;
     this.eventDispatcher = eventDispatcher;
     this.id = id;
     this.iteration = iteration;
@@ -30,13 +32,13 @@ export class BoardSide {
     this.eventBus.addEventListener<PlayEvent>('play', this.playFn);
   }
 
-  public static createNew(eventDispatcher: EventDispatcher, eventBus: EventBus): BoardSide {
-    return new BoardSide(uuidv4(), FieldArray.createNewInitialized(), 0, eventDispatcher, eventBus);
+  public static createNew(isBottom: boolean, eventDispatcher: EventDispatcher, eventBus: EventBus): BoardSide {
+    return new BoardSide(uuidv4(), FieldArray.createNewInitialized(), isBottom, 0, eventDispatcher, eventBus);
   }
 
   private static createNewVersionFrom(boardSide: BoardSide, field: FieldArray): BoardSide {
     boardSide.shutdown();
-    return new BoardSide(boardSide.id, field, boardSide.iteration + 1, boardSide.eventDispatcher, boardSide.eventBus);
+    return new BoardSide(boardSide.id, field, boardSide.isBottom, boardSide.iteration + 1, boardSide.eventDispatcher, boardSide.eventBus);
   }
 
   private isThisBoard({boardSide}: EventPayload<PlayEvent>): boolean {
@@ -55,11 +57,11 @@ export class BoardSide {
     const {player, fieldIndex, otherBoardSide} = payload;
     const logWithPrefix = (msg: string): void => this.log(`${player.name} ${msg}`);
 
-    logWithPrefix(`tries to take ${BoardSide.indexToName(fieldIndex)}`);
+    logWithPrefix(`tries to take ${this.indexToName(fieldIndex)}`);
     const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
     if (isNotAllowedToTake(isAllowedToTakeResult)) {
       this.eventDispatcher<PlayErrorEvent>('playError', {reason: isAllowedToTakeResult.reason});
-      logWithPrefix(`take ${BoardSide.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
+      logWithPrefix(`take ${this.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
       return payload;
     }
     const {updated, otherUpdated} = this.take(fieldIndex, this.field, otherBoardSide.field, logWithPrefix, true);
@@ -93,7 +95,7 @@ export class BoardSide {
       }
     };
 
-    logIfNotFirst(`tries to retake ${BoardSide.indexToName(index)}`);
+    logIfNotFirst(`tries to retake ${this.indexToName(index)}`);
     const isAllowedToTakeResult = arr.isAllowedToTake(index);
     if (!isAllowedToTakeResult.isAllowed) {
       logIfNotFirst(`can not retake`);
@@ -101,13 +103,13 @@ export class BoardSide {
     }
 
     const printStones = (arr: FieldArray, index: number): string => `${arr[index].stones} ${arr[index].stones === 1 ? 'stone' : 'stones'}`;
-    log(`${first ? 'take' : 'retake'} ${BoardSide.indexToName(index)} with ${printStones(arr, index)}`);
+    log(`${first ? 'take' : 'retake'} ${this.indexToName(index)} with ${printStones(arr, index)}`);
     const {updated: afterTake, lastSeatedIndex} = arr.take(index);
-    log(`tries to steal on position ${BoardSide.indexToName(lastSeatedIndex)}`);
+    log(`tries to steal on position ${this.indexToName(lastSeatedIndex)}`);
     const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherArr);
-    log(`${(isNotPossibleToSteal(isPossibleToStealResult) ? `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}` : `steals on position ${BoardSide.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}`)}`);
+    log(`${(isNotPossibleToSteal(isPossibleToStealResult) ? `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}` : `steals on position ${this.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}`)}`);
     const {updated: afterSteal, otherAfterStolenFrom} = afterTake.steal(lastSeatedIndex, otherArr);
-    log(`new stone count on position ${BoardSide.indexToName(lastSeatedIndex)}: ${printStones(afterSteal, lastSeatedIndex)}`);
+    log(`new stone count on position ${this.indexToName(lastSeatedIndex)}: ${printStones(afterSteal, lastSeatedIndex)}`);
     return this.take(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
   }
 
@@ -115,8 +117,12 @@ export class BoardSide {
     this.eventBus.removeEventListener('play', this.playFn);
   }
 
-  private static indexToName(fieldIndex: number): string {
-    return `${fieldIndex < 8 ? `A${fieldIndex + 1}` : `B${16 - fieldIndex}`}`;
+  private indexToName(fieldIndex: number): string {
+    if (this.isBottom) {
+      return `${fieldIndex < 8 ? `B${fieldIndex + 1}` : `A${16 - fieldIndex}`}`;
+    }
+    console.warn(fieldIndex);
+    return `${fieldIndex < 8 ? `C${8 - fieldIndex}` : `D${(fieldIndex - 8) + 1}`}`;
   }
 
   private static notAllowedToTakeToLogMessage(error: AllowedToTake<false>): string {
@@ -155,8 +161,8 @@ class Board {
   constructor(player0: Player, player1: Player, eventDispatcher: EventDispatcher, eventBus: EventBus) {
     this.player0 = player0;
     this.player1 = player1;
-    this.side0 = BoardSide.createNew(eventDispatcher, eventBus);
-    this.side1 = BoardSide.createNew(eventDispatcher, eventBus);
+    this.side0 = BoardSide.createNew(true, eventDispatcher, eventBus);
+    this.side1 = BoardSide.createNew(false, eventDispatcher, eventBus);
 
     eventBus.addEventListener<EndTurnEvent>('endTurn', ({boardSide, otherBoardSide}) => {
       this.side0 = boardSide.id === this.side0.id ? boardSide : otherBoardSide;
@@ -196,7 +202,7 @@ export class Game {
     this.eventBus = eventBus;
   }
 
-  public go() {
+  public go(): void {
     this.eventDispatcher<StartGameEvent>('startGame', {
       player: this.player0,
       boardSide: this.board.side0,
@@ -205,7 +211,7 @@ export class Game {
     this.eventDispatcher<LogEvent>('log', {msg: `${this.player0.name} turn.`});
   }
 
-  public reset() {
+  public reset(): void {
     this.eventDispatcher<ResetEvent>('reset', {});
     this.eventDispatcher<LogEvent>('log', {msg: `****RESET***`});
     this.board = new Board(this.player0, this.player1, this.eventDispatcher, this.eventBus);
