@@ -119,10 +119,9 @@ export class BoardSide {
 
   private indexToName(fieldIndex: number): string {
     if (this.isBottom) {
-      return `${fieldIndex < 8 ? `B${fieldIndex + 1}` : `A${16 - fieldIndex}`}`;
+      return `${fieldIndex < 8 ? `B${(fieldIndex % (this.field.length / 2)) + 1}` : `A${8 - (fieldIndex % (this.field.length / 2))}`}`;
     }
-    console.warn(fieldIndex);
-    return `${fieldIndex < 8 ? `C${8 - fieldIndex}` : `D${(fieldIndex - 8) + 1}`}`;
+    return `${fieldIndex < 8 ? `C${8 - (fieldIndex % (this.field.length / 2))}` : `D${(fieldIndex % (this.field.length / 2)) + 1}`}`;
   }
 
   private static notAllowedToTakeToLogMessage(error: AllowedToTake<false>): string {
