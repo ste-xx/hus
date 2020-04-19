@@ -36,7 +36,7 @@
       };
       window.define.modules = {};
     </script>
-    <script src="../dist/app.js"></script>
+    <script src="dist/app.js"></script>
     <!--    <script src="../dist/game.js"></script>-->
 </head>
 <body>
@@ -186,7 +186,7 @@
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game.board.side0, game.board.side1);
-  // const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
+  const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
   game.go();
 
   document.querySelector('#reset').addEventListener('click', () => {
@@ -201,9 +201,16 @@
   eventBus.addEventListener('finishGameLose', ({player}) => alert(`${player.name} lose`));
 
 
+  const previous = {
+    '.player0': 0,
+    '.player1': 0,
+  };
   eventBus.addEventListener('play', ({player, fieldIndex}) => {
+    console.warn('x');
     const p = game.player0.name === player.name ? '.player0' : '.player1';
-    [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex).style['border-color'] = getRandomColor();
+    [...document.querySelectorAll(p)].find(e => e.fieldIndex === previous[p]).style['border-color'] = 'buttonface';
+    previous[p] = fieldIndex;
+    [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex).style['border-color'] = "red"
   });
 
   function getRandomColor() {
@@ -214,6 +221,7 @@
     }
     return color;
   }
+
   eventBus.addEventListener('endTurn', ({player, boardSide, otherBoardSide}) => {
     if (game.player0.name === player.name) {
       render(boardSide, otherBoardSide);
