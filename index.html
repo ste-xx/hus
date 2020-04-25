@@ -16,7 +16,7 @@
             display: flex;
             height: 100%;
             flex-direction: column;
-            overflow-y: hidden;
+            /*overflow-y: hidden;*/
         }
 
     </style>
@@ -111,15 +111,15 @@
 </div>
 
 <div style="display: flex; width: 100%; flex-wrap: wrap">
-    <div style="width: 50%">
+    <div style="width: 50%; height: 300px; overflow-y: scroll">
         <h2>Action Log:</h2>
-        <div id="actionLog" style="overflow: auto; flex: 1"></div>
+        <div id="actionLog" style="height: 100%; flex: 1"></div>
     </div>
-    <div style="width: 50%">
+    <div style="width: 200px; margin-left: 16px">
         <h2>Last turn</h2>
         <h2 class="lastTurn">_</h2>
     </div>
-    <button id="reset" style="width:100%">reset</button>
+    <button id="reset" style="width:100%; margin-top: 16px">reset</button>
 </div>
 <script>
   const uuidv4 = window.define.modules.fn.uuidv4;
