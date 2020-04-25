@@ -110,9 +110,17 @@
     <div class="index">8</div>
 </div>
 
-<h2>Action Log:</h2>
-<div id="actionLog" style="overflow: auto; flex: 1"></div>
-<button id="reset">reset</button>
+<div style="display: flex; width: 100%; flex-wrap: wrap">
+    <div style="width: 50%">
+        <h2>Action Log:</h2>
+        <div id="actionLog" style="overflow: auto; flex: 1"></div>
+    </div>
+    <div style="width: 50%">
+        <h2>Last turn</h2>
+        <h2 class="lastTurn">_</h2>
+    </div>
+    <button id="reset" style="width:100%">reset</button>
+</div>
 <script>
   const uuidv4 = window.define.modules.fn.uuidv4;
   const eventDispatcher = (event, payload = {}) =>
@@ -186,7 +194,7 @@
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game.board.side0, game.board.side1);
-  const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
+  // const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
   game.go();
 
   document.querySelector('#reset').addEventListener('click', () => {
@@ -206,21 +214,13 @@
     '.player1': 0,
   };
   eventBus.addEventListener('play', ({player, fieldIndex}) => {
-    console.warn('x');
     const p = game.player0.name === player.name ? '.player0' : '.player1';
     [...document.querySelectorAll(p)].find(e => e.fieldIndex === previous[p]).style['border-color'] = 'buttonface';
     previous[p] = fieldIndex;
     [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex).style['border-color'] = "red"
+    document.querySelector('.lastTurn').innerHTML = `${player.name} : ${game.board.getBoardSidesFor(player).own.indexToName(fieldIndex)}`;
+    // document.querySelector('.lastTurn').innerHTML = `${p} : ${side.indexToName(fieldIndex)})`;
   });
-
-  function getRandomColor() {
-    var letters = '0123456789ABCDEF';
-    var color = '#';
-    for (var i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-  }
 
   eventBus.addEventListener('endTurn', ({player, boardSide, otherBoardSide}) => {
     if (game.player0.name === player.name) {

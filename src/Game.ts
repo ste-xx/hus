@@ -117,7 +117,7 @@ export class BoardSide {
     this.eventBus.removeEventListener('play', this.playFn);
   }
 
-  private indexToName(fieldIndex: number): string {
+  public indexToName(fieldIndex: number): string {
     if (this.isBottom) {
       return `${fieldIndex < 8 ? `B${(fieldIndex % (this.field.length / 2)) + 1}` : `A${8 - (fieldIndex % (this.field.length / 2))}`}`;
     }
