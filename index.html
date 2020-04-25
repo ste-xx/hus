@@ -194,7 +194,7 @@
   const game = new window.define.modules.Game.Game(eventDispatcher, eventBus);
   setupUi(game);
   render(game.board.side0, game.board.side1);
-  // const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
+  const ki = new window.define.modules.CheapKi.CheapKi(game.player1, eventDispatcher, eventBus);
   game.go();
 
   document.querySelector('#reset').addEventListener('click', () => {
