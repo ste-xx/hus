@@ -563,15 +563,23 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
             return MinMaxKi.applyMove(currentField, otherField, index);
         }
         static applyMove(arr, other, index) {
-            if (other.isInLoseCondition().isLoosed || arr.isInLoseCondition().isLoosed) {
-                return { currentField: arr, otherField: other };
+            let current = arr;
+            let opponent = other;
+            let currentIndex = index;
+            // Loop terminates when a lose condition is detected or no valid take is available
+            while (true) {
+                if (opponent.isInLoseCondition().isLoosed || current.isInLoseCondition().isLoosed) {
+                    return { currentField: current, otherField: opponent };
+                }
+                if (!current.isAllowedToTake(currentIndex).isAllowed) {
+                    return { currentField: current, otherField: opponent };
+                }
+                const { updated: afterTake, lastSeatedIndex } = current.take(currentIndex);
+                const { updated: afterSteal, otherAfterStolenFrom } = afterTake.steal(lastSeatedIndex, opponent);
+                current = afterSteal;
+                opponent = otherAfterStolenFrom;
+                currentIndex = lastSeatedIndex;
             }
-            if (!arr.isAllowedToTake(index).isAllowed) {
-                return { currentField: arr, otherField: other };
-            }
-            const { updated: afterTake, lastSeatedIndex } = arr.take(index);
-            const { updated: afterSteal, otherAfterStolenFrom } = afterTake.steal(lastSeatedIndex, other);
-            return MinMaxKi.applyMove(afterSteal, otherAfterStolenFrom, lastSeatedIndex);
         }
         static evaluate(currentField, otherField) {
             const halfLength = currentField.length / 2;
@@ -586,14 +594,14 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
             }
             return score;
         }
-        negamax(currentField, otherField, depth, alpha, beta) {
+        negamax(currentField, otherField, depth, alpha, beta, deadline) {
             if (otherField.isInLoseCondition().isLoosed) {
                 return Number.POSITIVE_INFINITY;
             }
             if (currentField.isInLoseCondition().isLoosed) {
                 return Number.NEGATIVE_INFINITY;
             }
-            if (depth === 0) {
+            if (depth === 0 || Date.now() >= deadline) {
                 return MinMaxKi.evaluate(currentField, otherField);
             }
             const moves = MinMaxKi.getValidMoves(currentField);
@@ -606,7 +614,7 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
                 if (result.otherField.isInLoseCondition().isLoosed) {
                     return Number.POSITIVE_INFINITY;
                 }
-                const score = -this.negamax(result.otherField, result.currentField, depth - 1, -beta, -alpha);
+                const score = -this.negamax(result.otherField, result.currentField, depth - 1, -beta, -alpha, deadline);
                 if (score > maxScore) {
                     maxScore = score;
                 }
@@ -624,6 +632,7 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
             if (moves.length === 0) {
                 return 0;
             }
+            const deadline = Date.now() + MinMaxKi.SEARCH_TIME_LIMIT_MS;
             let bestMove = moves[0];
             let bestScore = Number.NEGATIVE_INFINITY;
             for (const move of moves) {
@@ -631,7 +640,7 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
                 if (result.otherField.isInLoseCondition().isLoosed) {
                     return move;
                 }
-                const score = -this.negamax(result.otherField, result.currentField, this.depth - 1, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY);
+                const score = -this.negamax(result.otherField, result.currentField, this.depth - 1, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, deadline);
                 if (score > bestScore) {
                     bestScore = score;
                     bestMove = move;
@@ -641,5 +650,6 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
         }
     }
     exports.MinMaxKi = MinMaxKi;
+    MinMaxKi.SEARCH_TIME_LIMIT_MS = 5000;
 });
 //# sourceMappingURL=app.js.map
