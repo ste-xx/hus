@@ -158,13 +158,31 @@ export class FieldArray {
   }
 
   public toString(): string {
+    const colCount = this.length / 2;
+    const topLabels = this.topRow().map((_, i) => `A${i + 1}`);
+    const bottomLabels = this.bottomRow().slice().reverse().map((_, i) => `B${i + 1}`);
+    const topFields = this.topRow();
+    const bottomFields = this.bottomRow().slice().reverse();
+
+    const maxWidth = Math.max(
+      ...topFields.map(({stones}, i) => `${topLabels[i]}:${stones}`.length),
+      ...bottomFields.map(({stones}, i) => `${bottomLabels[i]}:${stones}`.length)
+    );
+
+    const cellWidth = maxWidth + 2;
+    const dash = '─'.repeat(cellWidth);
+    const border = (left: string, mid: string, right: string): string =>
+      `${left}${Array(colCount).fill(dash).join(mid)}${right}`;
+    const row = (labels: string[], fields: Field[]): string =>
+      `│ ${fields.map(({stones}, i) => `${labels[i]}:${stones}`.padEnd(maxWidth)).join(' │ ')} │`;
+
     return [
-      ...this.topRow()
-        .map(({stones}, i) => `A${i + 1}:${stones}`),
-      ...this.bottomRow()
-        .reverse()
-        .map(({stones}, i) => `B${i + 1}:${stones}`)
-    ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
+      border('┌', '┬', '┐'),
+      row(topLabels, topFields),
+      border('├', '┼', '┤'),
+      row(bottomLabels, bottomFields),
+      border('└', '┴', '┘'),
+    ].join('\n');
   }
 
   public isAllowedToTake(index: number): (AllowedToTake<boolean>) {
