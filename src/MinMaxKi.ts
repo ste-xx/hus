@@ -3,7 +3,7 @@ import {BoardSide, Player} from "./Game";
 import {FieldArray} from "./FieldArray";
 
 export class MinMaxKi {
-  private static readonly SEARCH_TIME_LIMIT_MS = 1000;
+  private static readonly SEARCH_TIME_LIMIT_MS = 5000;
 
   private player: Player;
   private eventBus: EventBus;
