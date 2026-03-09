@@ -1,41 +1,7 @@
-define("fn", ["require", "exports"], function (require, exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    function applyWhenNot(predicate, f) {
-        return () => {
-            if (!predicate()) {
-                f();
-                return false;
-            }
-            return true;
-        };
-    }
-    exports.applyWhenNot = applyWhenNot;
-    function when(predicate, f) {
-        return (x) => predicate(x) ? f(x) : x;
-    }
-    exports.when = when;
-    exports.when2 = (predicate, f) => {
-        return (x) => predicate(x) ? f(x) : x;
-    };
-    function wtfWrap(f) {
-        return (x) => {
-            f(x);
-            return x;
-        };
-    }
-    exports.wtfWrap = wtfWrap;
-    function uuidv4() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-    exports.uuidv4 = uuidv4;
-});
 define("Field", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Field = void 0;
     class Field {
         constructor(stones) {
             this.stones = stones;
@@ -52,9 +18,11 @@ define("Field", ["require", "exports"], function (require, exports) {
 define("FieldArray", ["require", "exports", "Field"], function (require, exports, Field_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.isNotAllowedToTake = (v) => {
+    exports.FieldArray = exports.whenOtherwise = exports.isNotPossibleToSteal = exports.isNotAllowedToTake = void 0;
+    const isNotAllowedToTake = (v) => {
         return !v.isAllowed;
     };
+    exports.isNotAllowedToTake = isNotAllowedToTake;
     function createAllowedToTake() {
         const self = {
             isAllowed: true,
@@ -82,9 +50,10 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
         };
         return self;
     }
-    exports.isNotPossibleToSteal = (v) => {
+    const isNotPossibleToSteal = (v) => {
         return !v.isPossible;
     };
+    exports.isNotPossibleToSteal = isNotPossibleToSteal;
     function createIsNotPossibleToStealBecause(reason) {
         const self = {
             isPossible: false,
@@ -112,9 +81,10 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
         };
         return self;
     }
-    exports.whenOtherwise = (predicate, trueFn, falseFn) => {
+    const whenOtherwise = (predicate, trueFn, falseFn) => {
         return () => predicate() ? trueFn() : falseFn();
     };
+    exports.whenOtherwise = whenOtherwise;
     function* arrGen(length, fn) {
         for (let i = 0; i < length; i++) {
             yield fn(i);
@@ -171,9 +141,9 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
             ].reduce((acc, cur, idx) => `${acc}${idx === this.length / 2 ? '\n ' : ' '}${cur}`, '');
         }
         isAllowedToTake(index) {
-            const inIndexRange = exports.whenOtherwise(() => index >= 0 && index < this.length, createAllowedToTake, () => createNotAllowedBecause('IndexOutOfBound'));
-            const existsStone = exports.whenOtherwise(() => this[index].stones > 0, createAllowedToTake, () => createNotAllowedBecause('NoStoneExists'));
-            const enoughStones = exports.whenOtherwise(() => this[index].stones > 1, createAllowedToTake, () => createNotAllowedBecause('NotEnoughStones'));
+            const inIndexRange = (0, exports.whenOtherwise)(() => index >= 0 && index < this.length, createAllowedToTake, () => createNotAllowedBecause('IndexOutOfBound'));
+            const existsStone = (0, exports.whenOtherwise)(() => this[index].stones > 0, createAllowedToTake, () => createNotAllowedBecause('NoStoneExists'));
+            const enoughStones = (0, exports.whenOtherwise)(() => this[index].stones > 1, createAllowedToTake, () => createNotAllowedBecause('NotEnoughStones'));
             // if one rule returns false -> not allowed
             const rules = [
                 inIndexRange,
@@ -207,9 +177,9 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
             };
         }
         isPossibleToSteal(index, other) {
-            const inCorrectRow = exports.whenOtherwise(() => this.isTopRow(index), createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('SecondRow'));
-            const enoughStones = exports.whenOtherwise(() => this[index].stones > 1, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('NotEnoughStones'));
-            const otherSideHasStones = exports.whenOtherwise(() => other[this.otherSideIndex(index)].stones > 0, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('OtherSideHasNoStones'));
+            const inCorrectRow = (0, exports.whenOtherwise)(() => this.isTopRow(index), createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('SecondRow'));
+            const enoughStones = (0, exports.whenOtherwise)(() => this[index].stones > 1, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('NotEnoughStones'));
+            const otherSideHasStones = (0, exports.whenOtherwise)(() => other[this.otherSideIndex(index)].stones > 0, createIsPossibleToSteal, () => createIsNotPossibleToStealBecause('OtherSideHasNoStones'));
             // if one rule returns false -> not possible
             const rules = [
                 inCorrectRow,
@@ -235,8 +205,8 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
             };
         }
         isInLoseCondition() {
-            const topRowIsEmpty = exports.whenOtherwise(() => !this.topRow().reduce((acc, cur) => acc || cur.isNotEmpty(), false), () => createIsLoosedCondition('toprow empty'), createNotLoosedCondition);
-            const noMoreThan1StoneEverywhere = exports.whenOtherwise(() => ![...this].reduce((acc, cur) => acc || cur.stones > 1, false), () => createIsLoosedCondition('no more than 1 stone everywhere'), createNotLoosedCondition);
+            const topRowIsEmpty = (0, exports.whenOtherwise)(() => !this.topRow().reduce((acc, cur) => acc || cur.isNotEmpty(), false), () => createIsLoosedCondition('toprow empty'), createNotLoosedCondition);
+            const noMoreThan1StoneEverywhere = (0, exports.whenOtherwise)(() => ![...this].reduce((acc, cur) => acc || cur.stones > 1, false), () => createIsLoosedCondition('no more than 1 stone everywhere'), createNotLoosedCondition);
             const rules = [
                 topRowIsEmpty,
                 noMoreThan1StoneEverywhere
@@ -246,9 +216,10 @@ define("FieldArray", ["require", "exports", "Field"], function (require, exports
     }
     exports.FieldArray = FieldArray;
 });
-define("Game", ["require", "exports", "fn", "FieldArray"], function (require, exports, fn_1, FieldArray_1) {
+define("Game", ["require", "exports", "./fn", "FieldArray"], function (require, exports, fn_1, FieldArray_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Game = exports.Player = exports.BoardSide = void 0;
     class BoardSide {
         constructor(id, field, isBottom, iteration, eventDispatcher, eventBus) {
             this.field = field;
@@ -257,11 +228,11 @@ define("Game", ["require", "exports", "fn", "FieldArray"], function (require, ex
             this.id = id;
             this.iteration = iteration;
             this.eventBus = eventBus;
-            this.playFn = fn_1.when(this.isThisBoard.bind(this), this.play.bind(this));
+            this.playFn = (0, fn_1.when)(this.isThisBoard.bind(this), this.play.bind(this));
             this.eventBus.addEventListener('play', this.playFn);
         }
         static createNew(isBottom, eventDispatcher, eventBus) {
-            return new BoardSide(fn_1.uuidv4(), FieldArray_1.FieldArray.createNewInitialized(), isBottom, 0, eventDispatcher, eventBus);
+            return new BoardSide((0, fn_1.uuidv4)(), FieldArray_1.FieldArray.createNewInitialized(), isBottom, 0, eventDispatcher, eventBus);
         }
         static createNewVersionFrom(boardSide, field) {
             boardSide.shutdown();
@@ -281,7 +252,7 @@ define("Game", ["require", "exports", "fn", "FieldArray"], function (require, ex
             const logWithPrefix = (msg) => this.log(`${player.name} ${msg}`);
             logWithPrefix(`tries to take ${this.indexToName(fieldIndex)}`);
             const isAllowedToTakeResult = this.field.isAllowedToTake(fieldIndex);
-            if (FieldArray_1.isNotAllowedToTake(isAllowedToTakeResult)) {
+            if ((0, FieldArray_1.isNotAllowedToTake)(isAllowedToTakeResult)) {
                 this.eventDispatcher('playError', { reason: isAllowedToTakeResult.reason });
                 logWithPrefix(`take ${this.indexToName(fieldIndex)} failed: ${isAllowedToTakeResult.map(BoardSide.notAllowedToTakeToLogMessage)}`);
                 return payload;
@@ -326,7 +297,7 @@ define("Game", ["require", "exports", "fn", "FieldArray"], function (require, ex
             const { updated: afterTake, lastSeatedIndex } = arr.take(index);
             log(`tries to steal on position ${this.indexToName(lastSeatedIndex)}`);
             const isPossibleToStealResult = afterTake.isPossibleToSteal(lastSeatedIndex, otherArr);
-            log(`${(FieldArray_1.isNotPossibleToSteal(isPossibleToStealResult) ? `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}` : `steals on position ${this.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}`)}`);
+            log(`${((0, FieldArray_1.isNotPossibleToSteal)(isPossibleToStealResult) ? `can not steal because: ${isPossibleToStealResult.map(BoardSide.notPossibleToStealToLogMessage)}` : `steals on position ${this.indexToName(lastSeatedIndex)} with ${printStones(afterTake, lastSeatedIndex)}`)}`);
             const { updated: afterSteal, otherAfterStolenFrom } = afterTake.steal(lastSeatedIndex, otherArr);
             log(`new stone count on position ${this.indexToName(lastSeatedIndex)}: ${printStones(afterSteal, lastSeatedIndex)}`);
             return this.take(lastSeatedIndex, afterSteal, otherAfterStolenFrom, log, false);
@@ -421,6 +392,7 @@ define("Events", ["require", "exports"], function (require, exports) {
 define("ActionLog", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.ConsoleActionLog = exports.HTMLActionLog = void 0;
     class ActionLog {
         constructor(eventBus) {
             eventBus.addEventListener('log', ({ msg }) => this.log(msg));
@@ -452,6 +424,7 @@ define("ActionLog", ["require", "exports"], function (require, exports) {
 define("CheapKi", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.CheapKi = void 0;
     class CheapKi {
         constructor(player, eventDispatcher, eventBus) {
             this.player = player;
@@ -496,9 +469,47 @@ define("CheapKi", ["require", "exports"], function (require, exports) {
     exports.CheapKi = CheapKi;
     ;
 });
+define("Fn", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.when2 = void 0;
+    exports.applyWhenNot = applyWhenNot;
+    exports.when = when;
+    exports.wtfWrap = wtfWrap;
+    exports.uuidv4 = uuidv4;
+    function applyWhenNot(predicate, f) {
+        return () => {
+            if (!predicate()) {
+                f();
+                return false;
+            }
+            return true;
+        };
+    }
+    function when(predicate, f) {
+        return (x) => predicate(x) ? f(x) : x;
+    }
+    const when2 = (predicate, f) => {
+        return (x) => predicate(x) ? f(x) : x;
+    };
+    exports.when2 = when2;
+    function wtfWrap(f) {
+        return (x) => {
+            f(x);
+            return x;
+        };
+    }
+    function uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+});
 define("MinMaxKi", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.MinMaxKi = void 0;
     class MinMaxKi {
         constructor(player, eventDispatcher, eventBus, depth = 3) {
             this.player = player;
