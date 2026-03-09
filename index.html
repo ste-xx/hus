@@ -1,24 +1,218 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hus</title>
     <style>
-        .side {
-            display: grid;
-            grid-template-columns: 20px auto auto auto auto auto auto auto auto
-        }
-
-        .index {
-            justify-self: center;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            color: green;
-            background: #190a70;
+            background: radial-gradient(ellipse at center, #2c1810 0%, #0d0805 100%);
+            color: #f0d090;
+            font-family: Georgia, 'Times New Roman', serif;
+            min-height: 100vh;
             display: flex;
-            height: 100%;
             flex-direction: column;
-            /*overflow-y: hidden;*/
+            align-items: center;
+            padding: 24px 16px;
         }
 
+        h1 {
+            font-size: 2.6rem;
+            color: #ffd700;
+            text-shadow: 0 0 24px rgba(255, 165, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.9);
+            letter-spacing: 0.18em;
+            margin-bottom: 24px;
+        }
+
+        /* ── Board container ── */
+        .board-container {
+            background: linear-gradient(160deg, #6b3a1f 0%, #4a2510 50%, #6b3a1f 100%);
+            border-radius: 20px;
+            padding: 18px 22px;
+            box-shadow:
+                0 0 0 2px #8b4513,
+                0 0 0 5px #3d1f00,
+                0 10px 40px rgba(0, 0, 0, 0.85),
+                inset 0 1px 0 rgba(255, 200, 100, 0.15);
+        }
+
+        .player-label {
+            text-align: center;
+            font-size: 1.05rem;
+            color: #ffd700;
+            letter-spacing: 0.1em;
+            margin: 6px 0;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        /* ── Row grid ── */
+        .side {
+            display: grid;
+            grid-template-columns: 22px repeat(8, 60px);
+            gap: 7px;
+            align-items: center;
+        }
+
+        .row-label {
+            text-align: center;
+            color: #cd853f;
+            font-size: 0.82rem;
+            font-weight: bold;
+        }
+
+        .col-index {
+            text-align: center;
+            color: #9a7040;
+            font-size: 0.72rem;
+        }
+
+        .board-divider {
+            height: 1px;
+            background: linear-gradient(
+                to right,
+                transparent 0%,
+                #8b4513 15%,
+                #cd853f 50%,
+                #8b4513 85%,
+                transparent 100%
+            );
+            margin: 10px 0;
+        }
+
+        /* ── Pit buttons ── */
+        button.player0,
+        button.player1 {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1.35rem;
+            font-weight: bold;
+            font-family: Georgia, serif;
+            line-height: 1;
+            outline: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        button.player0 {
+            background: radial-gradient(circle at 38% 35%, #a07850 0%, #5c3a18 55%, #2e1a08 100%);
+            color: #ffe8b0;
+            box-shadow:
+                2px 4px 10px rgba(0, 0, 0, 0.75),
+                inset 0 2px 5px rgba(255, 220, 150, 0.2),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.55);
+        }
+
+        button.player1 {
+            background: radial-gradient(circle at 38% 35%, #5a7090 0%, #1c3050 55%, #0a1828 100%);
+            color: #a8d8ff;
+            box-shadow:
+                2px 4px 10px rgba(0, 0, 0, 0.75),
+                inset 0 2px 5px rgba(150, 200, 255, 0.18),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.55);
+        }
+
+        button.player0:not(:disabled):hover {
+            transform: translateY(-4px) scale(1.06);
+            box-shadow:
+                2px 8px 16px rgba(0, 0, 0, 0.85),
+                0 0 14px rgba(255, 200, 80, 0.55),
+                inset 0 2px 5px rgba(255, 220, 150, 0.3),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        button.player1:not(:disabled):hover {
+            transform: translateY(-4px) scale(1.06);
+            box-shadow:
+                2px 8px 16px rgba(0, 0, 0, 0.85),
+                0 0 14px rgba(100, 180, 255, 0.55),
+                inset 0 2px 5px rgba(150, 200, 255, 0.3),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ── Info row below board ── */
+        .info-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 622px;
+        }
+
+        .log-panel,
+        .last-turn-panel {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid #5c3018;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        .log-panel {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .last-turn-panel {
+            min-width: 150px;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            color: #ffd700;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+        }
+
+        #actionLog {
+            height: 200px;
+            overflow-y: scroll;
+            color: #b09060;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            scrollbar-width: thin;
+            scrollbar-color: #8b4513 transparent;
+        }
+
+        .lastTurn {
+            color: #ffd700;
+            font-size: 1rem;
+            font-weight: normal;
+        }
+
+        #reset {
+            width: 100%;
+            max-width: 622px;
+            padding: 11px 24px;
+            margin-top: 14px;
+            background: linear-gradient(135deg, #7a3510, #4a2008);
+            color: #ffd700;
+            border: 2px solid #cd853f;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: Georgia, serif;
+            letter-spacing: 0.08em;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+
+        #reset:hover {
+            background: linear-gradient(135deg, #cd853f, #7a3510);
+            box-shadow: 0 0 18px rgba(255, 200, 80, 0.35);
+        }
     </style>
     <script>
       window.define = function (name, required, moduleFn) {
@@ -37,90 +231,96 @@
       window.define.modules = {};
     </script>
     <script src="dist/app.js"></script>
-    <!--    <script src="../dist/game.js"></script>-->
 </head>
 <body>
 
 <h1>Hus</h1>
 
-<h2> Player 2</h2>
-<div class="side">
+<div class="board-container">
 
-    <div></div>
-    <div class="index">1</div>
-    <div class="index">2</div>
-    <div class="index">3</div>
-    <div class="index">4</div>
-    <div class="index">5</div>
-    <div class="index">6</div>
-    <div class="index">7</div>
-    <div class="index">8</div>
+    <p class="player-label">Player 2</p>
 
-    <div> D</div>
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
+    <div class="side">
+        <div></div>
+        <div class="col-index">1</div>
+        <div class="col-index">2</div>
+        <div class="col-index">3</div>
+        <div class="col-index">4</div>
+        <div class="col-index">5</div>
+        <div class="col-index">6</div>
+        <div class="col-index">7</div>
+        <div class="col-index">8</div>
 
-    <div> C</div>
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-    <input type="button" class="player1">
-</div>
+        <div class="row-label">D</div>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
 
-<h2> Player 1</h2>
-<div class="side">
-    <div> B</div>
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-
-    <div> A</div>
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-    <input type="button" class="player0">
-
-    <div></div>
-    <div class="index">1</div>
-    <div class="index">2</div>
-    <div class="index">3</div>
-    <div class="index">4</div>
-    <div class="index">5</div>
-    <div class="index">6</div>
-    <div class="index">7</div>
-    <div class="index">8</div>
-</div>
-
-<div style="display: flex; width: 100%; flex-wrap: wrap">
-    <div style="width: 50%; height: 300px; overflow-y: scroll">
-        <h2>Action Log:</h2>
-        <div id="actionLog" style="height: 100%; flex: 1"></div>
+        <div class="row-label">C</div>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
+        <button class="player1"></button>
     </div>
-    <div style="width: 200px; margin-left: 16px">
-        <h2>Last turn</h2>
-        <h2 class="lastTurn">_</h2>
+
+    <div class="board-divider"></div>
+
+    <div class="side">
+        <div class="row-label">B</div>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+
+        <div class="row-label">A</div>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+        <button class="player0"></button>
+
+        <div></div>
+        <div class="col-index">1</div>
+        <div class="col-index">2</div>
+        <div class="col-index">3</div>
+        <div class="col-index">4</div>
+        <div class="col-index">5</div>
+        <div class="col-index">6</div>
+        <div class="col-index">7</div>
+        <div class="col-index">8</div>
     </div>
-    <button id="reset" style="width:100%; margin-top: 16px">reset</button>
+
+    <p class="player-label">Player 1</p>
+
 </div>
+
+<div class="info-row">
+    <div class="log-panel">
+        <p class="panel-title">Action Log</p>
+        <div id="actionLog"></div>
+    </div>
+    <div class="last-turn-panel">
+        <p class="panel-title">Last turn</p>
+        <p class="lastTurn">_</p>
+    </div>
+</div>
+<button id="reset">Reset</button>
 <script>
   const uuidv4 = window.define.modules.fn.uuidv4;
   const eventDispatcher = (event, payload = {}) =>
@@ -181,11 +381,11 @@
 
   const render = (side0, side1) => {
     const arr0 = [...document.querySelectorAll('.player0')];
-    arr0.slice(0, 8).forEach((field, index) => field.value = side0.getStoneCountFor(index));
-    arr0.slice(8, 16).reverse().forEach((field, index) => field.value = side0.getStoneCountFor(index + 8));
+    arr0.slice(0, 8).forEach((field, index) => field.textContent = side0.getStoneCountFor(index));
+    arr0.slice(8, 16).reverse().forEach((field, index) => field.textContent = side0.getStoneCountFor(index + 8));
     const arr1 = [...document.querySelectorAll('.player1')].reverse();
-    arr1.slice(0, 8).forEach((field, index) => field.value = side1.getStoneCountFor(index));
-    arr1.slice(8, 16).reverse().forEach((field, index) => field.value = side1.getStoneCountFor(index + 8));
+    arr1.slice(0, 8).forEach((field, index) => field.textContent = side1.getStoneCountFor(index));
+    arr1.slice(8, 16).reverse().forEach((field, index) => field.textContent = side1.getStoneCountFor(index + 8));
   };
   //
 
@@ -215,9 +415,11 @@
   };
   eventBus.addEventListener('play', ({player, fieldIndex}) => {
     const p = game.player0.name === player.name ? '.player0' : '.player1';
-    [...document.querySelectorAll(p)].find(e => e.fieldIndex === previous[p]).style['border-color'] = 'buttonface';
+    const prevEl = [...document.querySelectorAll(p)].find(e => e.fieldIndex === previous[p]);
+    if (prevEl) prevEl.style['border-color'] = 'transparent';
     previous[p] = fieldIndex;
-    [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex).style['border-color'] = "red"
+    const currEl = [...document.querySelectorAll(p)].find(e => e.fieldIndex === fieldIndex);
+    if (currEl) currEl.style['border-color'] = "red";
     document.querySelector('.lastTurn').innerHTML = `${player.name} : ${game.board.getBoardSidesFor(player).own.indexToName(fieldIndex)}`;
     // document.querySelector('.lastTurn').innerHTML = `${p} : ${side.indexToName(fieldIndex)})`;
   });
