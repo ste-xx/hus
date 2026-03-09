@@ -511,7 +511,7 @@ define("MinMaxKi", ["require", "exports"], function (require, exports) {
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MinMaxKi = void 0;
     class MinMaxKi {
-        constructor(player, eventDispatcher, eventBus, depth = 20) {
+        constructor(player, eventDispatcher, eventBus, depth = 10) {
             this.player = player;
             this.eventBus = eventBus;
             this.eventDispatcher = eventDispatcher;

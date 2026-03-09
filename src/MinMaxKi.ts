@@ -8,7 +8,7 @@ export class MinMaxKi {
   private eventDispatcher: EventDispatcher;
   private readonly depth: number;
 
-  constructor(player: Player, eventDispatcher: EventDispatcher, eventBus: EventBus, depth = 20) {
+  constructor(player: Player, eventDispatcher: EventDispatcher, eventBus: EventBus, depth = 10) {
     this.player = player;
     this.eventBus = eventBus;
     this.eventDispatcher = eventDispatcher;
